@@ -131,7 +131,7 @@ class EPollArrayWrapper {
 
         //分配事件空间大小 the epoll_event array passed to epoll_wait   传递给 epoll_wait 的 epoll_event 数组   SIZE_EPOLLEVENT = sizeof(struct epoll_event) 每条大小
         int allocationSize = NUM_EPOLLEVENTS * SIZE_EPOLLEVENT;  // 条数 * 每条大小
-        pollArray = new AllocatedNativeObject(allocationSize, true); // 分配内存
+        pollArray = new AllocatedNativeObject(allocationSize, true); //使用AllocatedNativeObject对象创建的堆外(native)内存对象  存放字节数组的地址  将数组的首地址保存到address
         pollArrayAddress = pollArray.address(); // 返回地址
 
         // eventHigh needed when using file descriptors > 64k

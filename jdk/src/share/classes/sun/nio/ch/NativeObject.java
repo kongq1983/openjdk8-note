@@ -77,7 +77,7 @@ class NativeObject {                                    // package-private
         } else { // 传入的是true   分配系统内存
             int ps = pageSize();
             long a = unsafe.allocateMemory(size + ps);
-            this.allocationAddress = a;
+            this.allocationAddress = a; // 将数组的首地址保存到address
             this.address = a + ps - (a & (ps - 1));
         }
     }
