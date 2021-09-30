@@ -101,26 +101,26 @@ class EPollSelectorImpl
     private int updateSelectedKeys() {
         int entries = pollWrapper.updated;
         int numKeysUpdated = 0;
-        for (int i=0; i<entries; i++) {
-            int nextFD = pollWrapper.getDescriptor(i);
-            SelectionKeyImpl ski = fdToKey.get(Integer.valueOf(nextFD));
+        for (int i=0; i<entries; i++) {  // 从0开始
+            int nextFD = pollWrapper.getDescriptor(i); // 获取FD
+            SelectionKeyImpl ski = fdToKey.get(Integer.valueOf(nextFD)); // 根据FD找到对应的SelectionKey
             // ski is null in the case of an interrupt
-            if (ski != null) {
+            if (ski != null) {  // 找到该FD的READY事件
                 int rOps = pollWrapper.getEventOps(i);
-                if (selectedKeys.contains(ski)) {
-                    if (ski.channel.translateAndSetReadyOps(rOps, ski)) {
+                if (selectedKeys.contains(ski)) { //如果selectedKeys中已经存在这个SelectionKey,则说明是代码出现了读取完socketChannel的数据之后没有调用其close()导致的,调用channel.close(),就会在processDeregisterQueue()中将该selectionKey从selectedKeys中移除
+                    if (ski.channel.translateAndSetReadyOps(rOps, ski)) { // 也就是有没有注册的事件返回  将底层的事件转换为Java封装的事件,SelectionKey.OP_READ等
                         numKeysUpdated++;
                     }
                 } else {
-                    ski.channel.translateAndSetReadyOps(rOps, ski);
+                    ski.channel.translateAndSetReadyOps(rOps, ski); //也就是有没有注册的事件返回  转换epoll的events到channel定义的events
                     if ((ski.nioReadyOps() & ski.nioInterestOps()) != 0) {
-                        selectedKeys.add(ski);
+                        selectedKeys.add(ski); //往成员selectedKeys中添加SelectionKey,在这之后调用selector.selectedKeys()就会返回这个成员
                         numKeysUpdated++;
                     }
                 }
             }
         }
-        return numKeysUpdated;
+        return numKeysUpdated; // 返回Ready的Channel个数
     }
 
     protected void implClose() throws IOException {
@@ -174,7 +174,7 @@ class EPollSelectorImpl
         ski.setIndex(-1);
         keys.remove(ski); //从注册的Selector删除本SelectionKey
         selectedKeys.remove(ski); // 从已就绪的事件列表中删除本SelectionKey
-        deregister((AbstractSelectionKey)ski);
+        deregister((AbstractSelectionKey)ski);  // AbstractSelector.deregister调用 最终((AbstractSelectableChannel)key.channel()).removeKey(key) 从Channel删除该SelectionKey
         SelectableChannel selch = ski.channel();
         if (!selch.isOpen() && !selch.isRegistered())
             ((SelChImpl)selch).kill();
