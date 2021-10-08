@@ -190,7 +190,7 @@ class EPollSelectorImpl
     public Selector wakeup() {
         synchronized (interruptLock) {
             if (!interruptTriggered) {
-                pollWrapper.interrupt();
+                pollWrapper.interrupt(); // EPollArrayWrapper
                 interruptTriggered = true;
             }
         }
