@@ -45,7 +45,7 @@ Thread* ThreadLocalStorage::get_thread_slow() {
   return (Thread*) os::thread_local_storage_at(ThreadLocalStorage::thread_index());
 }
 
-void ThreadLocalStorage::set_thread(Thread* thread) {
+void ThreadLocalStorage::set_thread(Thread* thread) { // 设置Thread
   pd_set_thread(thread);
 
   // The following ensure that any optimization tricks we have tried
@@ -58,7 +58,7 @@ void ThreadLocalStorage::init() {
   assert(!is_initialized(),
          "More than one attempt to initialize threadLocalStorage");
   pd_init();
-  set_thread_index(os::allocate_thread_local_storage());
+  set_thread_index(os::allocate_thread_local_storage());  // 设置用于分配标识进程中线程特定数据的键
   generate_code_for_get_thread();
 }
 

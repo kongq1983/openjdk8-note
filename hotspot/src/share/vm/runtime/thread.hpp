@@ -434,7 +434,7 @@ class Thread: public ThreadShadow {
   ThreadLocalAllocBuffer& tlab()                 { return _tlab; }
   void initialize_tlab() {
     if (UseTLAB) { // 是否启用UseTLAB
-      tlab().initialize();
+      tlab().initialize(); // tlab() = ThreadLocalAllocBuffer&
     }
   }
 

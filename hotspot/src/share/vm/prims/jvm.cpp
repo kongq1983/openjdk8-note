@@ -3229,7 +3229,7 @@ JVM_ENTRY(jobject, JVM_CurrentThread(JNIEnv* env, jclass threadClass))
   JVMWrapper("JVM_CurrentThread");
   oop jthread = thread->threadObj();
   assert (thread != NULL, "no current thread!");
-  return JNIHandles::make_local(env, jthread);
+  return JNIHandles::make_local(env, jthread);  // calls make_local(JNIEnv* env, oop obj)
 JVM_END
 
 

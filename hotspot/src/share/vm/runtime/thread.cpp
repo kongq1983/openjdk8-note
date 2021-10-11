@@ -1635,7 +1635,7 @@ JavaThread::~JavaThread() {
 // The first routine called by a new Java thread
 void JavaThread::run() {
   // initialize thread-local alloc buffer related fields
-  this->initialize_tlab();
+  this->initialize_tlab(); // tlab处理  thread.hpp中定义
 
   // used to test validitity of stack trace backs
   this->record_base_of_stack_pointer();

@@ -1048,7 +1048,7 @@ static void restore_thread_pointer(void* p) {
 
 int os::allocate_thread_local_storage() {
   pthread_key_t key;
-  int rslt = pthread_key_create(&key, restore_thread_pointer);
+  int rslt = pthread_key_create(&key, restore_thread_pointer); // 用于分配标识进程中线程特定数据的键  返回0成功
   assert(rslt == 0, "cannot allocate thread local storage");
   return (int)key;
 }
@@ -1060,8 +1060,8 @@ void os::free_thread_local_storage(int index) {
   assert(rslt == 0, "invalid index");
 }
 
-void os::thread_local_storage_at_put(int index, void* value) { //
-  int rslt = pthread_setspecific((pthread_key_t)index, value);
+void os::thread_local_storage_at_put(int index, void* value) { // todo open tsb
+  int rslt = pthread_setspecific((pthread_key_t)index, value);  // 设置tsb
   assert(rslt == 0, "pthread_setspecific failed");
 }
 
