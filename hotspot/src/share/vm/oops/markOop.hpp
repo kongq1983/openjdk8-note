@@ -120,10 +120,10 @@ class markOopDesc: public oopDesc {
   // The biased locking code currently requires that the age bits be
   // contiguous to the lock bits.
   enum { lock_shift               = 0,
-         biased_lock_shift        = lock_bits,
-         age_shift                = lock_bits + biased_lock_bits,
-         cms_shift                = age_shift + age_bits,
-         hash_shift               = cms_shift + cms_bits,
+         biased_lock_shift        = lock_bits, // 2
+         age_shift                = lock_bits + biased_lock_bits, // 2 + 1
+         cms_shift                = age_shift + age_bits, // 3 + 4
+         hash_shift               = cms_shift + cms_bits, // 7
          epoch_shift              = hash_shift
   };
 
@@ -132,7 +132,7 @@ class markOopDesc: public oopDesc {
          biased_lock_mask         = right_n_bits(lock_bits + biased_lock_bits),
          biased_lock_mask_in_place= biased_lock_mask << lock_shift,
          biased_lock_bit_in_place = 1 << biased_lock_shift,
-         age_mask                 = right_n_bits(age_bits),
+         age_mask                 = right_n_bits(age_bits), // right_n_bits(4)
          age_mask_in_place        = age_mask << age_shift,
          epoch_mask               = right_n_bits(epoch_bits),
          epoch_mask_in_place      = epoch_mask << epoch_shift,
@@ -269,17 +269,17 @@ class markOopDesc: public oopDesc {
   // synchronization functions. They are not really gc safe.
   // They must get updated if markOop layout get changed.
   markOop set_unlocked() const {
-    return markOop(value() | unlocked_value);
+    return markOop(value() | unlocked_value); // unlocked_value=1
   }
-  bool has_locker() const {
-    return ((value() & lock_mask_in_place) == locked_value);
+  bool has_locker() const { // 轻量级锁
+    return ((value() & lock_mask_in_place) == locked_value); // locked_value=0
   }
   BasicLock* locker() const {
     assert(has_locker(), "check");
     return (BasicLock*) value();
   }
   bool has_monitor() const {
-    return ((value() & monitor_value) != 0);
+    return ((value() & monitor_value) != 0); // monitor_value =2
   }
   ObjectMonitor* monitor() const {
     assert(has_monitor(), "check");

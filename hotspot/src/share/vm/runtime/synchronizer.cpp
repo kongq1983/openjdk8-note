@@ -227,31 +227,31 @@ void ObjectSynchronizer::slow_enter(Handle obj, BasicLock* lock, TRAPS) {
   markOop mark = obj->mark();
   assert(!mark->has_bias_pattern(), "should not see bias pattern here");
 
-  if (mark->is_neutral()) {
+  if (mark->is_neutral()) { // 如果是无锁状态
     // Anticipate successful CAS -- the ST of the displaced mark must
     // be visible <= the ST performed by the CAS.
-    lock->set_displaced_header(mark);
+    lock->set_displaced_header(mark); //设置Displaced Mark Word并替换对象头的mark word
     if (mark == (markOop) Atomic::cmpxchg_ptr(lock, obj()->mark_addr(), mark)) {
       TEVENT (slow_enter: release stacklock) ;
       return ;
     }
     // Fall through to inflate() ...
   } else
-  if (mark->has_locker() && THREAD->is_lock_owned((address)mark->locker())) {
+  if (mark->has_locker() && THREAD->is_lock_owned((address)mark->locker())) {  // 轻量级锁
     assert(lock != mark->locker(), "must not re-lock the same lock");
     assert(lock != (BasicLock*)obj->mark(), "don't relock with same BasicLock");
-    lock->set_displaced_header(NULL);
+    lock->set_displaced_header(NULL); // 如果是重入，则设置Displaced Mark Word为null
     return;
   }
 
 #if 0
   // The following optimization isn't particularly useful.
-  if (mark->has_monitor() && mark->monitor()->is_entered(THREAD)) {
+  if (mark->has_monitor() && mark->monitor()->is_entered(THREAD)) { // 重量级锁
     lock->set_displaced_header (NULL) ;
     return ;
   }
 #endif
-
+   //// 走到这一步说明已经是存在多个线程竞争锁了 需要膨胀为重量级锁
   // The object header will never be displaced to this lock,
   // so it does not matter what the value is, except that it
   // must be non-zero to avoid looking like a re-entrant lock,
@@ -377,7 +377,7 @@ ObjectLocker::~ObjectLocker() {
 // NOTE: must use heavy weight monitor to handle wait()
 void ObjectSynchronizer::wait(Handle obj, jlong millis, TRAPS) {
   if (UseBiasedLocking) { // 如果是偏向锁，则撤销
-    BiasedLocking::revoke_and_rebias(obj, false, THREAD);
+    BiasedLocking::revoke_and_rebias(obj, false, THREAD); // 撤销偏向锁
     assert(!obj->mark()->has_bias_pattern(), "biases should be revoked by now");
   }
   if (millis < 0) {
@@ -407,13 +407,13 @@ void ObjectSynchronizer::waitUninterruptibly (Handle obj, jlong millis, TRAPS) {
 }
 
 void ObjectSynchronizer::notify(Handle obj, TRAPS) {
- if (UseBiasedLocking) {
-    BiasedLocking::revoke_and_rebias(obj, false, THREAD);
+ if (UseBiasedLocking) { // 是否启用偏向锁
+    BiasedLocking::revoke_and_rebias(obj, false, THREAD); // 撤销偏向锁
     assert(!obj->mark()->has_bias_pattern(), "biases should be revoked by now");
   }
 
   markOop mark = obj->mark();
-  if (mark->has_locker() && THREAD->is_lock_owned((address)mark->locker())) {
+  if (mark->has_locker() && THREAD->is_lock_owned((address)mark->locker())) {  // 轻量级锁
     return;
   }
   ObjectSynchronizer::inflate(THREAD, obj())->notify(THREAD);
@@ -422,13 +422,13 @@ void ObjectSynchronizer::notify(Handle obj, TRAPS) {
 // NOTE: see comment of notify()
 void ObjectSynchronizer::notifyall(Handle obj, TRAPS) {
   if (UseBiasedLocking) { // 是否使用偏向锁
-    BiasedLocking::revoke_and_rebias(obj, false, THREAD); // 如果是偏向锁，则撤销
+    BiasedLocking::revoke_and_rebias(obj, false, THREAD); // 如果是偏向锁，则撤销  Thread * Self = THREAD
     assert(!obj->mark()->has_bias_pattern(), "biases should be revoked by now");
   }
 
-  markOop mark = obj->mark();
+  markOop mark = obj->mark(); // 读取对象头
   if (mark->has_locker() && THREAD->is_lock_owned((address)mark->locker())) {
-    return;
+    return; // 若有线程锁，证明存在竞争线程
   }
   ObjectSynchronizer::inflate(THREAD, obj())->notifyAll(THREAD); // ObjectMonitor::notifyAll(TRAPS) objectMonitor.cpp:1816
 }
@@ -1190,7 +1190,7 @@ ObjectMonitor* ObjectSynchronizer::inflate_helper(oop obj) {
 // Note that we could encounter some performance loss through false-sharing as
 // multiple locks occupy the same $ line.  Padding might be appropriate.
 
-
+// ObjectMonitor
 ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
   // Inflate mutates the heap ...
   // Relaxing assertion for bug 6320749.
@@ -1209,7 +1209,7 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
       // *  BIASED       - Illegal.  We should never see this
 
       // CASE: inflated
-      if (mark->has_monitor()) {
+      if (mark->has_monitor()) {  // 已有重量级锁
           ObjectMonitor * inf = mark->monitor() ;
           assert (inf->header()->is_neutral(), "invariant");
           assert (inf->object() == object, "invariant") ;
@@ -1248,7 +1248,7 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
       // before or after the CAS(INFLATING) operation.
       // See the comments in omAlloc().
 
-      if (mark->has_locker()) {
+      if (mark->has_locker()) { // 现在是轻量级锁
           ObjectMonitor * m = omAlloc (Self) ;
           // Optimistically prepare the objectmonitor - anticipate successful CAS
           // We do this before the CAS in order to minimize the length of time

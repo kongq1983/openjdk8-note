@@ -527,14 +527,14 @@ public:
 
 
 BiasedLocking::Condition BiasedLocking::revoke_and_rebias(Handle obj, bool attempt_rebias, TRAPS) {
-  assert(!SafepointSynchronize::is_at_safepoint(), "must not be called while at safepoint");
+  assert(!SafepointSynchronize::is_at_safepoint(), "must not be called while at safepoint"); //必须在安全点
 
   // We can revoke the biases of anonymously-biased objects
   // efficiently enough that we should not cause these revocations to
   // update the heuristics because doing so may cause unwanted bulk
   // revocations (which are expensive) to occur.
-  markOop mark = obj->mark();
-  if (mark->is_biased_anonymously() && !attempt_rebias) {
+  markOop mark = obj->mark(); //2：读取对象头
+  if (mark->is_biased_anonymously() && !attempt_rebias) { // 3:没有线程获取了偏向锁
     // We are probably trying to revoke the bias of this object due to
     // an identity hash code computation. Try to revoke the bias
     // without a safepoint. This is possible if we can successfully
@@ -547,7 +547,7 @@ BiasedLocking::Condition BiasedLocking::revoke_and_rebias(Handle obj, bool attem
     if (res_mark == biased_value) {
       return BIAS_REVOKED;
     }
-  } else if (mark->has_bias_pattern()) {
+  } else if (mark->has_bias_pattern()) { //4:已经偏向了
     Klass* k = obj->klass();
     markOop prototype_header = k->prototype_header();
     if (!prototype_header->has_bias_pattern()) {
@@ -587,12 +587,12 @@ BiasedLocking::Condition BiasedLocking::revoke_and_rebias(Handle obj, bool attem
       }
     }
   }
-
+  //5:没有执行偏向，通过启发式的方式决定到底是执行撤销还是执行rebias
   HeuristicsResult heuristics = update_heuristics(obj(), attempt_rebias);
   if (heuristics == HR_NOT_BIASED) {
-    return NOT_BIASED;
+    return NOT_BIASED; //5.1:偏向状态改成了不需要偏向
   } else if (heuristics == HR_SINGLE_REVOKE) {
-    Klass *k = obj->klass();
+    Klass *k = obj->klass(); //5.2:启发式决定执行单次的撤销
     markOop prototype_header = k->prototype_header();
     if (mark->biased_locker() == THREAD &&
         prototype_header->bias_epoch() == mark->bias_epoch()) {
@@ -622,7 +622,7 @@ BiasedLocking::Condition BiasedLocking::revoke_and_rebias(Handle obj, bool attem
 
   assert((heuristics == HR_BULK_REVOKE) ||
          (heuristics == HR_BULK_REBIAS), "?");
-  VM_BulkRevokeBias bulk_revoke(&obj, (JavaThread*) THREAD,
+  VM_BulkRevokeBias bulk_revoke(&obj, (JavaThread*) THREAD, //6：等到虚拟机运行到safepoint,实际就是执行  VM_BulkRevokeBias 的doit的 bulk_revoke_or_rebias_at_safepoint方法
                                 (heuristics == HR_BULK_REBIAS),
                                 attempt_rebias);
   VMThread::execute(&bulk_revoke);

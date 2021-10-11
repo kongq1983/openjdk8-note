@@ -985,7 +985,7 @@ bool Thread::is_lock_owned(address adr) const {
 
 bool Thread::set_as_starting_thread() {
  // NOTE: this must be called inside the main thread.
-  return os::create_main_thread((JavaThread*)this);
+  return os::create_main_thread((JavaThread*)this);  // todo 创建主线程
 }
 
 static void initialize_class(Symbol* class_name, TRAPS) {
