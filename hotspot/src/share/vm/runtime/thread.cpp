@@ -1713,11 +1713,11 @@ static void ensure_join(JavaThread* thread) {
   // Ignore pending exception (ThreadDeath), since we are exiting anyway
   thread->clear_pending_exception();
   // Thread is exiting. So set thread_status field in  java.lang.Thread class to TERMINATED.
-  java_lang_Thread::set_thread_status(threadObj(), java_lang_Thread::TERMINATED);
+  java_lang_Thread::set_thread_status(threadObj(), java_lang_Thread::TERMINATED); // 设置TERMINATED状态
   // Clear the native thread instance - this makes isAlive return false and allows the join()
   // to complete once we've done the notify_all below
   java_lang_Thread::set_thread(threadObj(), NULL);
-  lock.notify_all(thread);
+  lock.notify_all(thread); // 比如join()通知  在此处唤醒被当前线程实例阻塞的其他线程，如案例中的main线程
   // Ignore pending exception (ThreadDeath), since we are exiting anyway
   thread->clear_pending_exception();
 }

@@ -34,18 +34,18 @@
 // ParkEvent instead.  Beware, however, that the JVMTI code
 // knows about ObjectWaiters, so we'll have to reconcile that code.
 // See next_waiter(), first_waiter(), etc.
-
+// ObjectWaiter对象是双向链表结构，保存了_thread（当前线程）以及当前的状态TState等数据，每个等待锁的线程都会被封装成ObjectWaiter对象
 class ObjectWaiter : public StackObj {
  public:
   enum TStates { TS_UNDEF, TS_READY, TS_RUN, TS_WAIT, TS_ENTER, TS_CXQ } ;
   enum Sorted  { PREPEND, APPEND, SORTED } ;
   ObjectWaiter * volatile _next;
   ObjectWaiter * volatile _prev;
-  Thread*       _thread;
+  Thread*       _thread;  // 当前线程
   jlong         _notifier_tid;
   ParkEvent *   _event;
   volatile int  _notified ;
-  volatile TStates TState ;
+  volatile TStates TState ;  // 状态
   Sorted        _Sorted ;           // List placement disposition
   bool          _active ;           // Contention monitoring is enabled
  public:
@@ -74,7 +74,7 @@ class EventJavaMonitorWait;
 // It is also used as RawMonitor by the JVMTI
 
 
-class ObjectMonitor {
+class ObjectMonitor { // todo ObjectMonitor
  public:
   enum {
     OM_OK,                    // no error
@@ -136,21 +136,21 @@ class ObjectMonitor {
   Thread* thread_of_waiter(ObjectWaiter* o)                            { return o->_thread; }
 
   // initialize the monitor, exception the semaphore, all other fields
-  // are simple integers or pointers
+  // are simple integers or pointers  see  ObjectWaiter
   ObjectMonitor() {
     _header       = NULL; //markOop对象头
     _count        = 0;
     _waiters      = 0, //等待线程数
     _recursions   = 0; //重入次数
     _object       = NULL; //监视器锁寄生的对象。锁不是平白出现的，而是寄托存储于对象中
-    _owner        = NULL; //指向获得ObjectMonitor对象的线程或基础锁
-    _WaitSet      = NULL; //处于wait状态的线程，会被加入到wait set
+    _owner        = NULL; //指向获得ObjectMonitor对象的线程
+    _WaitSet      = NULL; //处于wait状态的线程，会被加入到wait set (主要存放所有wait的线程的对象，也就是说如果有线程处于wait状态，将被挂入这个队列) 当wait的线程被notify之后，会将对应的线程从WaitSet移动到EntryList中
     _WaitSetLock  = 0 ;
     _Responsible  = NULL ;
     _succ         = NULL ;
-    _cxq          = NULL ;
+    _cxq          = NULL ;  // 等待锁的第一队列，一个单向链表  （当持有锁的线程释放锁前，会将cxq中的所有元素移动到EntryList中去）
     FreeNext      = NULL ;
-    _EntryList    = NULL ;  //处于wait状态的线程，会被加入到wait set
+    _EntryList    = NULL ;  // 等待锁的第二队列，一个双向链表 数据都是从这里取  所有在等待获取锁的线程的对象，也就是说如果有线程处于等待获取锁的状态的时候，将被挂入这个队列
     _SpinFreq     = 0 ;
     _SpinClock    = 0 ;
     OwnerIsThread = 0 ;

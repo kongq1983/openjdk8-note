@@ -1414,8 +1414,8 @@ void ObjectMonitor::reenter(intptr_t recursions, TRAPS) {
 
 #define CHECK_OWNER()                                                             \
   do {                                                                            \
-    if (THREAD != _owner) {                                                       \
-      if (THREAD->is_lock_owned((address) _owner)) {                              \
+    if (THREAD != _owner) {     // 比如join()                                                    \
+      if (THREAD->is_lock_owned((address) _owner)) {                              \ //当前线程不是重量级锁的获得者
         _owner = THREAD ;  /* Convert from basiclock addr to Thread addr */       \
         _recursions = 0;                                                          \
         OwnerIsThread = 1 ;                                                       \
@@ -1471,7 +1471,7 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
 
    EventJavaMonitorWait event;
 
-   // check for a pending interrupt
+   // check for a pending interrupt   调用wait 的时候线程可以被中断
    if (interruptible && Thread::is_interrupted(Self, true) && !HAS_PENDING_EXCEPTION) {
      // post monitor waited event.  Note that this is past-tense, we are done waiting.
      if (JvmtiExport::should_post_monitor_waited()) {
@@ -1491,7 +1491,7 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
        post_monitor_wait_event(&event, 0, millis, false);
      }
      TEVENT (Wait - Throw IEX) ;
-     THROW(vmSymbols::java_lang_InterruptedException());
+     THROW(vmSymbols::java_lang_InterruptedException());  //调用wait 的时候线程可以被中断  抛异常
      return ;
    }
 
@@ -1499,13 +1499,13 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
 
    assert (Self->_Stalled == 0, "invariant") ;
    Self->_Stalled = intptr_t(this) ;
-   jt->set_current_waiting_monitor(this);
+   jt->set_current_waiting_monitor(this); // thread.hpp  设置_current_waiting_monitor : ObjectMonitor
 
    // create a node to be put into the queue
    // Critically, after we reset() the event but prior to park(), we must check
    // for a pending interrupt.
-   ObjectWaiter node(Self);
-   node.TState = ObjectWaiter::TS_WAIT ;
+   ObjectWaiter node(Self);  //构造节点，封装了当前线程
+   node.TState = ObjectWaiter::TS_WAIT ; //节点状态为TS_WAIT
    Self->_ParkEvent->reset() ;
    OrderAccess::fence();          // ST into Event; membar ; LD interrupted-flag
 
@@ -1516,9 +1516,9 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
    // returns because of a timeout of interrupt.  Contention is exceptionally rare
    // so we use a simple spin-lock instead of a heavier-weight blocking lock.
 
-   Thread::SpinAcquire (&_WaitSetLock, "WaitSet - add") ;
-   AddWaiter (&node) ;
-   Thread::SpinRelease (&_WaitSetLock) ;
+   Thread::SpinAcquire (&_WaitSetLock, "WaitSet - add") ; //操作等待队列需要获取锁
+   AddWaiter (&node) ; // //将当前节点加入等待队列里------->(1)   通过ObjectMonitor::AddWaiter调用把新建立的ObjectWaiter对象放入到 _WaitSet 的队列的末尾中
+   Thread::SpinRelease (&_WaitSetLock) ; //释放等待队列的锁
 
    if ((SyncFlags & 4) == 0) {
       _Responsible = NULL ;
@@ -1526,7 +1526,7 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
    intptr_t save = _recursions; // record the old recursion count
    _waiters++;                  // increment the number of waiters
    _recursions = 0;             // set the recursion level to be 1
-   exit (true, Self) ;                    // exit the monitor
+   exit (true, Self) ;                    // exit the monitor 释放锁+唤醒线程------->(2)
    guarantee (_owner != Self, "invariant") ;
 
    // The thread is on the WaitSet list - now park() it.
@@ -1549,10 +1549,10 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
        if (interruptible && (Thread::is_interrupted(THREAD, false) || HAS_PENDING_EXCEPTION)) {
            // Intentionally empty
        } else
-       if (node._notified == 0) {
-         if (millis <= 0) {
+       if (node._notified == 0) {  //挂起自己------->(3)   上面一系列判断操作后，当线程确实加入WaitSet时，则使用park方法挂起
+         if (millis <= 0) { // todo 重要关注这里
             Self->_ParkEvent->park () ;
-         } else {
+         } else { // millis >0 有时间指定
             ret = Self->_ParkEvent->park (millis) ;
          }
        }
@@ -1643,10 +1643,10 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
      assert (_owner != Self, "invariant") ;
      ObjectWaiter::TStates v = node.TState ;
      if (v == ObjectWaiter::TS_RUN) {
-         enter (Self) ;
+         enter (Self) ;  //正常获取锁的流程
      } else {
          guarantee (v == ObjectWaiter::TS_ENTER || v == ObjectWaiter::TS_CXQ, "invariant") ;
-         ReenterI (Self, &node) ;
+         ReenterI (Self, &node) ;  //此时v的状态是在同步队列里--------------->(4)
          node.wait_reenter_end(this);
      }
 
@@ -1691,9 +1691,9 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
 
 // Consider:
 // If the lock is cool (cxq == null && succ == null) and we're on an MP system
-// then instead of transferring a thread from the WaitSet to the EntryList
-// we might just dequeue a thread from the WaitSet and directly unpark() it.
-
+// then instead of transferring a thread from the WaitSet to the EntryList   然后将线程从WaitSet传输到EntryList
+// we might just dequeue a thread from the WaitSet and directly unpark() it. 我们可能只是将一个线程从WaitSet中出列，然后直接对其进行unparak（）。
+// waitSet不为空从waitSet获取一个ObjectWaiter，然后根据不同的Policy加入到EntryList或通过Atomic::cmpxchg_ptr指令自旋操作加入cxq队列或者直接unpark唤醒
 void ObjectMonitor::notify(TRAPS) {
   CHECK_OWNER();
   if (_WaitSet == NULL) {
@@ -1705,7 +1705,7 @@ void ObjectMonitor::notify(TRAPS) {
   int Policy = Knob_MoveNotifyee ;
 
   Thread::SpinAcquire (&_WaitSetLock, "WaitSet - notify") ;
-  ObjectWaiter * iterator = DequeueWaiter() ;
+  ObjectWaiter * iterator = DequeueWaiter() ; //通过DequeueWaiter获取_WaitSet列表中的第一个ObjectWaiter
   if (iterator != NULL) {
      TEVENT (Notify1 - Transfer) ;
      guarantee (iterator->TState == ObjectWaiter::TS_WAIT, "invariant") ;
@@ -1724,7 +1724,7 @@ void ObjectMonitor::notify(TRAPS) {
         assert (List != iterator, "invariant") ;
      }
 
-     if (Policy == 0) {       // prepend to EntryList
+     if (Policy == 0) {       // prepend to EntryList  放入_EntryList队列的排头位置
          if (List == NULL) {
              iterator->_next = iterator->_prev = NULL ;
              _EntryList = iterator ;
@@ -1735,7 +1735,7 @@ void ObjectMonitor::notify(TRAPS) {
              _EntryList = iterator ;
         }
      } else
-     if (Policy == 1) {      // append to EntryList
+     if (Policy == 1) {      // append to EntryList    放入_EntryList队列的末尾位置
          if (List == NULL) {
              iterator->_next = iterator->_prev = NULL ;
              _EntryList = iterator ;
@@ -1751,7 +1751,7 @@ void ObjectMonitor::notify(TRAPS) {
             iterator->_next = NULL ;
         }
      } else
-     if (Policy == 2) {      // prepend to cxq
+     if (Policy == 2) {      // prepend to cxq   默认策略2   _EntryList队列为空就放入_EntryList，   否则放入_cxq队列的排头位置
          // prepend to cxq
          if (List == NULL) {
              iterator->_next = iterator->_prev = NULL ;
@@ -1767,7 +1767,7 @@ void ObjectMonitor::notify(TRAPS) {
             }
          }
      } else
-     if (Policy == 3) {      // append to cxq
+     if (Policy == 3) {      // append to cxq    放入_cxq队列的末尾位置
         iterator->TState = ObjectWaiter::TS_CXQ ;
         for (;;) {
             ObjectWaiter * Tail ;

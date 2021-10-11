@@ -376,7 +376,7 @@ ObjectLocker::~ObjectLocker() {
 //  Wait/Notify/NotifyAll
 // NOTE: must use heavy weight monitor to handle wait()
 void ObjectSynchronizer::wait(Handle obj, jlong millis, TRAPS) {
-  if (UseBiasedLocking) {
+  if (UseBiasedLocking) { // 如果是偏向锁，则撤销
     BiasedLocking::revoke_and_rebias(obj, false, THREAD);
     assert(!obj->mark()->has_bias_pattern(), "biases should be revoked by now");
   }
@@ -384,9 +384,9 @@ void ObjectSynchronizer::wait(Handle obj, jlong millis, TRAPS) {
     TEVENT (wait - throw IAX) ;
     THROW_MSG(vmSymbols::java_lang_IllegalArgumentException(), "timeout value is negative");
   }
-  ObjectMonitor* monitor = ObjectSynchronizer::inflate(THREAD, obj());
+  ObjectMonitor* monitor = ObjectSynchronizer::inflate(THREAD, obj()); //膨胀为重量级锁
   DTRACE_MONITOR_WAIT_PROBE(monitor, obj(), THREAD, millis);
-  monitor->wait(millis, true, THREAD);
+  monitor->wait(millis, true, THREAD); // ObjectMonitor::wait  调用ObjectMonitor的wait函数
 
   /* This dummy call is in place to get around dtrace bug 6254741.  Once
      that's fixed we can uncomment the following line and remove the call */
