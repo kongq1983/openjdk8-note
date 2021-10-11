@@ -5865,7 +5865,7 @@ void Parker::park(bool isAbsolute, jlong time) {
   // Return immediately if a permit is available.
   // We depend on Atomic::xchg() having full barrier semantics
   // since we are doing a lock-free update to _counter.
-  if (Atomic::xchg(0, &_counter) > 0) return;
+  if (Atomic::xchg(0, &_counter) > 0) return; // 如果_counter>0 ，则直接cas设置0
 
   Thread* thread = Thread::current();
   assert(thread->is_Java_thread(), "Must be JavaThread");
@@ -5957,16 +5957,16 @@ void Parker::park(bool isAbsolute, jlong time) {
     jt->java_suspend_self();
   }
 }
-
+//unpark时，则简单多了，直接设置_counter为1，再unlock mutex返回。如果_counter之前的值是0，则还要调用pthread_cond_signal唤醒在park中等待的线程
 void Parker::unpark() {
   int s, status ;
-  status = pthread_mutex_lock(_mutex);
+  status = pthread_mutex_lock(_mutex); // 加锁
   assert (status == 0, "invariant") ;
-  s = _counter;
-  _counter = 1;
+  s = _counter; // 备份的_counter
+  _counter = 1;  //直接设置_counter为1
   if (s < 1) {
     // thread might be parked
-    if (_cur_index != -1) {
+    if (_cur_index != -1) { // _cur_index在park()赋值
       // thread is definitely parked
       if (WorkAroundNPTLTimedWaitHang) {
         status = pthread_cond_signal (&_cond[_cur_index]);
@@ -5976,7 +5976,7 @@ void Parker::unpark() {
       } else {
         status = pthread_mutex_unlock(_mutex);
         assert (status == 0, "invariant");
-        status = pthread_cond_signal (&_cond[_cur_index]);
+        status = pthread_cond_signal (&_cond[_cur_index]); //pthread_cond_signal唤醒在park中等待的线程
         assert (status == 0, "invariant");
       }
     } else {
@@ -5984,7 +5984,7 @@ void Parker::unpark() {
       assert (status == 0, "invariant") ;
     }
   } else {
-    pthread_mutex_unlock(_mutex);
+    pthread_mutex_unlock(_mutex); // 目前已经是1了，就直接lock、unlock
     assert (status == 0, "invariant") ;
   }
 }

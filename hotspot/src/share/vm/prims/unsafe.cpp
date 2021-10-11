@@ -1233,7 +1233,7 @@ UNSAFE_ENTRY(void, Unsafe_Park(JNIEnv *env, jobject unsafe, jboolean isAbsolute,
                              (uintptr_t) thread->parker(), (int) isAbsolute, time);
 #endif /* USDT2 */
   JavaThreadParkedState jtps(thread, time != 0);
-  thread->parker()->park(isAbsolute != 0, time);
+  thread->parker()->park(isAbsolute != 0, time); // thread -> Parker->park()
 #ifndef USDT2
   HS_DTRACE_PROBE1(hotspot, thread__park__end, thread->parker());
 #else /* USDT2 */
@@ -1248,12 +1248,12 @@ UNSAFE_ENTRY(void, Unsafe_Park(JNIEnv *env, jobject unsafe, jboolean isAbsolute,
     event.commit();
   }
 UNSAFE_END
-
+// Unsafe_Unpark会将JavaThread的parker属性缓存到Thread实例的nativeParkEventPointer属性中，方便下次调用unpark方法时可以快速获取关联的parker，然后执行unpark方法唤醒目标线程
 UNSAFE_ENTRY(void, Unsafe_Unpark(JNIEnv *env, jobject unsafe, jobject jthread))
   UnsafeWrapper("Unsafe_Unpark");
   Parker* p = NULL;
   if (jthread != NULL) {
-    oop java_thread = JNIHandles::resolve_non_null(jthread);
+    oop java_thread = JNIHandles::resolve_non_null(jthread); //获取关联的Thread实例oop
     if (java_thread != NULL) {
       jlong lp = java_lang_Thread::park_event(java_thread);
       if (lp != 0) {
@@ -1261,16 +1261,16 @@ UNSAFE_ENTRY(void, Unsafe_Unpark(JNIEnv *env, jobject unsafe, jobject jthread))
         // non-atomically on 32bit systems, since there, one word will
         // always be zero anyway and the value set is always the same
         p = (Parker*)addr_from_java(lp);
-      } else {
+      } else { //如果为空，说明是第一次访问
         // Grab lock if apparently null or using older version of library
-        MutexLocker mu(Threads_lock);
-        java_thread = JNIHandles::resolve_non_null(jthread);
+        MutexLocker mu(Threads_lock); //获取锁Threads_lock
+        java_thread = JNIHandles::resolve_non_null(jthread); //获取关联的Thread实例oop
         if (java_thread != NULL) {
           JavaThread* thr = java_lang_Thread::thread(java_thread);
           if (thr != NULL) {
             p = thr->parker();
             if (p != NULL) { // Bind to Java thread for next time.
-              java_lang_Thread::set_park_event(java_thread, addr_to_java(p));
+              java_lang_Thread::set_park_event(java_thread, addr_to_java(p)); //设置Thread实例的nativeParkEventPointer属性，这样下次调用unpark方法时可以快速的获取parker指针
             }
           }
         }
@@ -1284,7 +1284,7 @@ UNSAFE_ENTRY(void, Unsafe_Unpark(JNIEnv *env, jobject unsafe, jobject jthread))
     HOTSPOT_THREAD_UNPARK(
                           (uintptr_t) p);
 #endif /* USDT2 */
-    p->unpark();
+    p->unpark(); //执行unpark方法唤醒目标线程  os_linux.cpp:5961
   }
 UNSAFE_END
 

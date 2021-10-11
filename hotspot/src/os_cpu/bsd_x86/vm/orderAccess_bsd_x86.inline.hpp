@@ -59,9 +59,9 @@ inline void OrderAccess::fence() {
     __asm__ volatile ("lock; addl $0,0(%%rsp)" : : : "cc", "memory");
 #else
     __asm__ volatile ("lock; addl $0,0(%%esp)" : : : "cc", "memory");
-#endif
-  }
-}
+#endif // lock前缀表示将后面这句汇编语句："addl $0,0(%%esp)"作为cpu的一个内存屏障
+  } //addl $0,0(%%esp)表示将数值0加到esp寄存器中，而该寄存器指向栈顶的内存单元
+} // 加上一个0，esp寄存器的数值依然不变。即这是一条无用的汇编 指令。在此利用这条无价值的汇编指令来配合lock指令，在__asm__,__volatile__,memory的作用下，用作cpu的内存屏障
 
 inline jbyte    OrderAccess::load_acquire(volatile jbyte*   p) { return *p; }
 inline jshort   OrderAccess::load_acquire(volatile jshort*  p) { return *p; }
