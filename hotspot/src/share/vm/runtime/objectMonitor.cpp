@@ -1812,7 +1812,7 @@ void ObjectMonitor::notify(TRAPS) {
   }
 }
 
-
+// 比如ObjectSynchronizer::inflate(THREAD, obj())->notifyAll(THREAD);  唤醒thread   synchronizer.cpp : 433
 void ObjectMonitor::notifyAll(TRAPS) {
   CHECK_OWNER();
   ObjectWaiter* iterator;

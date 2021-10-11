@@ -421,8 +421,8 @@ void ObjectSynchronizer::notify(Handle obj, TRAPS) {
 
 // NOTE: see comment of notify()
 void ObjectSynchronizer::notifyall(Handle obj, TRAPS) {
-  if (UseBiasedLocking) {
-    BiasedLocking::revoke_and_rebias(obj, false, THREAD);
+  if (UseBiasedLocking) { // 是否使用偏向锁
+    BiasedLocking::revoke_and_rebias(obj, false, THREAD); // 如果是偏向锁，则撤销
     assert(!obj->mark()->has_bias_pattern(), "biases should be revoked by now");
   }
 
@@ -430,7 +430,7 @@ void ObjectSynchronizer::notifyall(Handle obj, TRAPS) {
   if (mark->has_locker() && THREAD->is_lock_owned((address)mark->locker())) {
     return;
   }
-  ObjectSynchronizer::inflate(THREAD, obj())->notifyAll(THREAD);
+  ObjectSynchronizer::inflate(THREAD, obj())->notifyAll(THREAD); // ObjectMonitor::notifyAll(TRAPS) objectMonitor.cpp:1816
 }
 
 // -----------------------------------------------------------------------------
