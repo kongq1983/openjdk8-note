@@ -56,15 +56,15 @@ Symbol* SymbolTable::allocate_symbol(const u1* name, int len, bool c_heap, TRAPS
   assert (len <= Symbol::max_length(), "should be checked by caller");
 
   Symbol* sym;
-
-  if (DumpSharedSpaces) {
+    // product(bool, DumpSharedSpaces, false)
+  if (DumpSharedSpaces) { // metaspace?  MetaspaceObj
     // Allocate all symbols to CLD shared metaspace
     sym = new (len, ClassLoaderData::the_null_class_loader_data(), THREAD) Symbol(name, len, -1);
-  } else if (c_heap) {
+  } else if (c_heap) { // heap
     // refcount starts as 1
     sym = new (len, THREAD) Symbol(name, len, 1);
     assert(sym != NULL, "new should call vm_exit_out_of_memory if C_HEAP is exhausted");
-  } else {
+  } else { // Arena是使用malloc分配的内存块  相当于直接内存
     // Allocate to global arena
     sym = new (len, arena(), THREAD) Symbol(name, len, -1);
   }
@@ -195,11 +195,11 @@ Symbol* SymbolTable::lookup(int index, const char* name,
   int count = 0;
   for (HashtableEntry<Symbol*, mtSymbol>* e = bucket(index); e != NULL; e = e->next()) {
     count++;  // count all entries in this bucket, not just ones with same hash
-    if (e->hash() == hash) {
+    if (e->hash() == hash) { // 先根据hash
       Symbol* sym = e->literal();
       if (sym->equals(name, len)) {
         // something is referencing this symbol now.
-        sym->increment_refcount();
+        sym->increment_refcount(); // 引用数+1
         return sym;
       }
     }
@@ -409,15 +409,15 @@ Symbol* SymbolTable::basic_add(int index_arg, u1 *name, int len,
   if (test != NULL) {
     // A race occurred and another thread introduced the symbol.
     assert(test->refcount() != 0, "lookup should have incremented the count");
-    return test;
+    return test; // 已存在 直接返回
   }
 
   // Create a new symbol.
-  Symbol* sym = allocate_symbol(name, len, c_heap, CHECK_NULL);
+  Symbol* sym = allocate_symbol(name, len, c_heap, CHECK_NULL); // 分配内存 创建symbol
   assert(sym->equals((char*)name, len), "symbol must be properly initialized");
 
   HashtableEntry<Symbol*, mtSymbol>* entry = new_entry(hashValue, sym);
-  add_entry(index, entry);
+  add_entry(index, entry); // 添加
   return sym;
 }
 
@@ -693,7 +693,7 @@ oop StringTable::basic_add(int index_arg, Handle string, jchar* name,
   }
 
   HashtableEntry<oop, mtSymbol>* entry = new_entry(hashValue, string());
-  add_entry(index, entry);
+  add_entry(index, entry); // 指定位置
   return string();
 }
 
