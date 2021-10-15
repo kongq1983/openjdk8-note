@@ -1800,14 +1800,14 @@ run:
       }
 
       /* monitorenter and monitorexit for locking/unlocking an object */
-
+        // https://blog.csdn.net/Dome_/article/details/86064558
       CASE(_monitorenter): {
-        oop lockee = STACK_OBJECT(-1);
+        oop lockee = STACK_OBJECT(-1);  // lockee 就是锁对象
         // derefing's lockee ought to provoke implicit null check
         CHECK_NULL(lockee);
         // find a free monitor or one already allocated for this object
         // if we find a matching object then we need a new monitor
-        // since this is recursive enter
+        // since this is recursive enter  找到一个空闲的Lock Record
         BasicObjectLock* limit = istate->monitor_base();
         BasicObjectLock* most_recent = (BasicObjectLock*) istate->stack_base();
         BasicObjectLock* entry = NULL;
@@ -1816,8 +1816,8 @@ run:
           else if (most_recent->obj() == lockee) break;
           most_recent++;
         }
-        if (entry != NULL) { // entry是每个线程私有栈帧中都会创建的 // entry表示lock record
-          entry->set_obj(lockee); //将lock record里面的obj reference指向mark word
+        if (entry != NULL) { // entry不为null，代表还有空闲的Lock Record  entry是每个线程私有栈帧中都会创建的 // entry表示lock record
+          entry->set_obj(lockee); //将Lock Record的obj指针指向锁对象  将lock record里面的obj reference指向mark word
           int success = false;
           uintptr_t epoch_mask_in_place = (uintptr_t)markOopDesc::epoch_mask_in_place;
 
@@ -1832,44 +1832,44 @@ run:
               (((uintptr_t)lockee->klass()->prototype_header() | thread_ident) ^ (uintptr_t)mark) &
               ~((uintptr_t) markOopDesc::age_mask_in_place);
              // // 同一个线程获取偏向锁
-            if  (anticipated_bias_locking_value == 0) { // 如果这个值等于0，说明当前线程id和mark word里面存的线程id是相同的
+            if  (anticipated_bias_locking_value == 0) { // 如果偏向的线程是自己且epoch等于class的epoch   如果这个值等于0，说明当前线程id和mark word里面存的线程id是相同的
               // already biased towards this thread, nothing to do
               if (PrintBiasedLockingStatistics) {
                 (* BiasedLocking::biased_lock_entry_count_addr())++; // 进入次数加1
               }
               success = true;
             }
-            else if ((anticipated_bias_locking_value & markOopDesc::biased_lock_mask_in_place) != 0) { //是否不可偏向
+            else if ((anticipated_bias_locking_value & markOopDesc::biased_lock_mask_in_place) != 0) { //如果偏向模式关闭，则尝试撤销偏向锁
               // try revoke bias
               markOop header = lockee->klass()->prototype_header();
-              if (hash != markOopDesc::no_hash) {
-                header = header->copy_set_hash(hash);
+              if (hash != markOopDesc::no_hash) { // 有hash了
+                header = header->copy_set_hash(hash); // 设置hash
               }
-              if (Atomic::cmpxchg_ptr(header, lockee->mark_addr(), mark) == mark) { // 就是对象头被别人改了
+              if (Atomic::cmpxchg_ptr(header, lockee->mark_addr(), mark) == mark) { //利用CAS操作将mark word替换为class中的mark word   就是对象头被别人改了
                 if (PrintBiasedLockingStatistics)
                   (*BiasedLocking::revoked_lock_entry_count_addr())++;
               }
             }
-            else if ((anticipated_bias_locking_value & epoch_mask_in_place) !=0) {
+            else if ((anticipated_bias_locking_value & epoch_mask_in_place) !=0) { // code 7：如果epoch不等于class中的epoch，则尝试重偏向
               // try rebias
-              markOop new_header = (markOop) ( (intptr_t) lockee->klass()->prototype_header() | thread_ident);
+              markOop new_header = (markOop) ( (intptr_t) lockee->klass()->prototype_header() | thread_ident); // 构造一个偏向当前线程的mark word
               if (hash != markOopDesc::no_hash) {
                 new_header = new_header->copy_set_hash(hash);
               }
-              if (Atomic::cmpxchg_ptr((void*)new_header, lockee->mark_addr(), mark) == mark) {
+              if (Atomic::cmpxchg_ptr((void*)new_header, lockee->mark_addr(), mark) == mark) { // CAS替换对象头的mark word
                 if (PrintBiasedLockingStatistics)
                   (* BiasedLocking::rebiased_lock_entry_count_addr())++;
               }
               else {
-                CALL_VM(InterpreterRuntime::monitorenter(THREAD, entry), handle_exception);
+                CALL_VM(InterpreterRuntime::monitorenter(THREAD, entry), handle_exception); // 重偏向失败，代表存在多线程竞争，则调用monitorenter方法进行锁升级
               }
               success = true;
             }
             else {  // 1.匿名偏向（必须是101的状态）2.首先肯定不是自己  不是自己有两种情况 1.压根没有偏向
-              // try to bias towards thread in case object is anonymously biased
+              // try to bias towards thread in case object is anonymously biased  走到这里说明当前要么偏向别的线程，要么是匿名偏向（即没有偏向任何线程）
               markOop header = (markOop) ((uintptr_t) mark & ((uintptr_t)markOopDesc::biased_lock_mask_in_place |
                                                               (uintptr_t)markOopDesc::age_mask_in_place |
-                                                              epoch_mask_in_place));
+                                                              epoch_mask_in_place)); //构建一个匿名偏向的mark word，尝试用CAS指令替换掉锁对象的mark word
               if (hash != markOopDesc::no_hash) {
                 header = header->copy_set_hash(hash);
               }
@@ -1877,25 +1877,25 @@ run:
               // debugging hint  // 看看是否是匿名偏向 如果是则偏向自己
               DEBUG_ONLY(entry->lock()->set_displaced_header((markOop) (uintptr_t) 0xdeaddead);)
               if (Atomic::cmpxchg_ptr((void*)new_header, lockee->mark_addr(), header) == header) {
-                if (PrintBiasedLockingStatistics)
+                if (PrintBiasedLockingStatistics) // CAS修改成功
                   (* BiasedLocking::anonymously_biased_lock_entry_count_addr())++;
               }
               else { // monitorenter 首先会去进行偏向锁撤销 撤销的时候判断是否在同步块中；如果在则改成轻量锁，否则返回
-                CALL_VM(InterpreterRuntime::monitorenter(THREAD, entry), handle_exception);
+                CALL_VM(InterpreterRuntime::monitorenter(THREAD, entry), handle_exception); // 如果修改失败说明存在多线程竞争，所以进入monitorenter方法
               }
               success = true;
             }
           }
 
-          // traditional lightweight locking
-          if (!success) { // 压根就不是偏向锁 偏向失败
-            markOop displaced = lockee->mark()->set_unlocked();  // 生成一个无锁的mark word 001
+          // traditional lightweight locking   传统轻量级锁  下面是轻量级锁的逻辑
+          if (!success) { // 压根就不是偏向锁 偏向失败  // 如果偏向线程不是当前线程或没有开启偏向模式等原因都会导致success==false
+            markOop displaced = lockee->mark()->set_unlocked();  // 构造一个无锁状态的Displaced Mark Word，并将Lock Record的lock指向它   生成一个无锁的mark word 001
             entry->lock()->set_displaced_header(displaced);
-            bool call_vm = UseHeavyMonitors; //openjdk8----Atomic::cmpxchg_ptr(entry, lockee->mark_addr(), displaced) != displaced  如果这整个是false，表示加锁成功
-            if (call_vm || Atomic::cmpxchg_ptr(entry, lockee->mark_addr(), displaced) != displaced) {
-              // Is it simple recursive case?
-              if (!call_vm && THREAD->is_lock_owned((address) displaced->clear_lock_bits())) {
-                entry->lock()->set_displaced_header(NULL);
+            bool call_vm = UseHeavyMonitors; // //如果指定了-XX:+UseHeavyMonitors，则call_vm=true，代表禁用偏向锁和轻量级锁
+            if (call_vm || Atomic::cmpxchg_ptr(entry, lockee->mark_addr(), displaced) != displaced) { //openjdk8----Atomic::cmpxchg_ptr(entry, lockee->mark_addr(), displaced) != displaced  如果这整个是false，表示加锁成功
+              // Is it simple recursive case?  上面一句:利用CAS将对象头的mark word替换为指向Lock Record的指针
+              if (!call_vm && THREAD->is_lock_owned((address) displaced->clear_lock_bits())) {  // 判断是不是锁重入
+                entry->lock()->set_displaced_header(NULL); // 如果是锁重入，则直接将Displaced Mark Word设置为null
               } else {
                 CALL_VM(InterpreterRuntime::monitorenter(THREAD, entry), handle_exception);
               }
@@ -1903,25 +1903,25 @@ run:
           }
           UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1); // 执行CPU下一条指令
         } else {
-          istate->set_msg(more_monitors);
+          istate->set_msg(more_monitors);  // lock record不够，重新执行
           UPDATE_PC_AND_RETURN(0); // Re-execute
         }
       }
-
+        // 1. 偏向锁的释放很简单，只要将对应Lock Record释放就好了   2. 而轻量级锁则需要将Displaced Mark Word替换到对象头的mark word中 3. 如果CAS失败或者是重量级锁则进入到InterpreterRuntime::monitorexit方法中
       CASE(_monitorexit): {
-        oop lockee = STACK_OBJECT(-1);
+        oop lockee = STACK_OBJECT(-1); // lockee 就是锁对象
         CHECK_NULL(lockee);
         // derefing's lockee ought to provoke implicit null check
         // find our monitor slot
         BasicObjectLock* limit = istate->monitor_base();
         BasicObjectLock* most_recent = (BasicObjectLock*) istate->stack_base();
-        while (most_recent != limit ) {
+        while (most_recent != limit ) { // 从低往高遍历栈的Lock Record
           if ((most_recent)->obj() == lockee) { // 如果Lock Record关联的是该锁对象
             BasicLock* lock = most_recent->lock();
             markOop header = lock->displaced_header();
             most_recent->set_obj(NULL); //释放Lock Record
-            if (!lockee->mark()->has_bias_pattern()) {   // 如果是偏向模式，仅仅释放Lock Record就好了。否则要走轻量级锁or重量级锁的释放流程
-              bool call_vm = UseHeavyMonitors;
+            if (!lockee->mark()->has_bias_pattern()) {   // 这里是非偏向模式才进来  如果是偏向模式，仅仅释放Lock Record就好了。否则要走轻量级锁or重量级锁的释放流程
+              bool call_vm = UseHeavyMonitors; //这里是非偏向模式才进来
               // If it isn't recursive we either must swap old header or call the runtime
               if (header != NULL || call_vm) { // header!=NULL说明不是重入，则需要将Displaced Mark Word CAS到对象头的Mark Word
                 if (call_vm || Atomic::cmpxchg_ptr(header, lockee->mark_addr(), lock) != lock) {

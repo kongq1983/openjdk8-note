@@ -1478,7 +1478,7 @@ DT_RETURN_MARK_DECL(NewObject, jobject);
 DT_RETURN_MARK_DECL(NewObject, jobject
                     , HOTSPOT_JNI_NEWOBJECT_RETURN(_ret_ref));
 #endif /* USDT2 */
-
+// new
 JNI_ENTRY(jobject, jni_NewObject(JNIEnv *env, jclass clazz, jmethodID methodID, ...))
   JNIWrapper("NewObject");
 #ifndef USDT2
@@ -1502,17 +1502,17 @@ JNI_ENTRY(jobject, jni_NewObject(JNIEnv *env, jclass clazz, jmethodID methodID, 
 JNI_END
 
 
-JNI_ENTRY(jclass, jni_GetObjectClass(JNIEnv *env, jobject obj))
   JNIWrapper("GetObjectClass");
+JNI_ENTRY(jclass, jni_GetObjectClass(JNIEnv *env, jobject obj))
 #ifndef USDT2
   DTRACE_PROBE2(hotspot_jni, GetObjectClass__entry, env, obj);
 #else /* USDT2 */
   HOTSPOT_JNI_GETOBJECTCLASS_ENTRY(
                                    env, obj);
-#endif /* USDT2 */
-  Klass* k = JNIHandles::resolve_non_null(obj)->klass();
+#endif /* USDT2 */  // oop result = *(oop*)handle;
+  Klass* k = JNIHandles::resolve_non_null(obj)->klass(); /* 根据传入的java对象引用找到引用对象然后找到该对象类型的元数据 */  // jniHandles.hpp:183
   jclass ret =
-    (jclass) JNIHandles::make_local(env, k->java_mirror());
+    (jclass) JNIHandles::make_local(env, k->java_mirror()); /*根据元数据找到java_mirror，也就是java程序中的Class对象实例*/  //jniHandles.cpp:63
 #ifndef USDT2
   DTRACE_PROBE1(hotspot_jni, GetObjectClass__return, ret);
 #else /* USDT2 */

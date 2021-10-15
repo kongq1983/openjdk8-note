@@ -117,7 +117,7 @@ public:
 };
 
 
-
+// HashtableBucket属于 BasicHashtableEntry
 template <MEMFLAGS F> class HashtableBucket : public CHeapObj<F> {
   friend class VMStructs;
 private:

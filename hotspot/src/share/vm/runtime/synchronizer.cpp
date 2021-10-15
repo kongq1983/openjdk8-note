@@ -188,14 +188,14 @@ void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
   markOop dhw = lock->displaced_header();
   markOop mark ;
   if (dhw == NULL) {
-     // Recursive stack-lock.
-     // Diagnostics -- Could be: stack-locked, inflating, inflated.
+     // Recursive stack-lock.  递归堆栈锁。
+     // Diagnostics -- Could be: stack-locked, inflating, inflated.  诊断 -- 可能是：堆栈锁定、膨胀、膨胀。
      mark = object->mark() ;
      assert (!mark->is_neutral(), "invariant") ;
      if (mark->has_locker() && mark != markOopDesc::INFLATING()) {
         assert(THREAD->is_lock_owned((address)mark->locker()), "invariant") ;
      }
-     if (mark->has_monitor()) {
+     if (mark->has_monitor()) { // 重量级锁
         ObjectMonitor * m = mark->monitor() ;
         assert(((oop)(m->object()))->mark() == mark, "invariant") ;
         assert(m->is_entered(THREAD), "invariant") ;
@@ -259,7 +259,7 @@ void ObjectSynchronizer::slow_enter(Handle obj, BasicLock* lock, TRAPS) {
   lock->set_displaced_header(markOopDesc::unused_mark());
   ObjectSynchronizer::inflate(THREAD, obj())->enter(THREAD);
 }
-
+// monitorexit
 // This routine is used to handle interpreter/compiler slow case
 // We don't need to use fast path here, because it must have
 // failed in the interpreter/compiler code. Simply use the heavy
@@ -374,7 +374,7 @@ ObjectLocker::~ObjectLocker() {
 
 // -----------------------------------------------------------------------------
 //  Wait/Notify/NotifyAll
-// NOTE: must use heavy weight monitor to handle wait()
+// NOTE: must use heavy weight monitor to handle wait()  调用wait()必须是重量级锁
 void ObjectSynchronizer::wait(Handle obj, jlong millis, TRAPS) {
   if (UseBiasedLocking) { // 如果是偏向锁，则撤销
     BiasedLocking::revoke_and_rebias(obj, false, THREAD); // 撤销偏向锁

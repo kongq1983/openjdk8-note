@@ -56,15 +56,15 @@ Symbol* SymbolTable::allocate_symbol(const u1* name, int len, bool c_heap, TRAPS
   assert (len <= Symbol::max_length(), "should be checked by caller");
 
   Symbol* sym;
-
-  if (DumpSharedSpaces) {
+    // product(bool, DumpSharedSpaces, false)
+  if (DumpSharedSpaces) { // metaspace?  MetaspaceObj
     // Allocate all symbols to CLD shared metaspace
     sym = new (len, ClassLoaderData::the_null_class_loader_data(), THREAD) Symbol(name, len, -1);
-  } else if (c_heap) {
+  } else if (c_heap) { // heap
     // refcount starts as 1
     sym = new (len, THREAD) Symbol(name, len, 1);
     assert(sym != NULL, "new should call vm_exit_out_of_memory if C_HEAP is exhausted");
-  } else {
+  } else { // Arena是使用malloc分配的内存块  相当于直接内存
     // Allocate to global arena
     sym = new (len, arena(), THREAD) Symbol(name, len, -1);
   }
@@ -195,18 +195,18 @@ Symbol* SymbolTable::lookup(int index, const char* name,
   int count = 0;
   for (HashtableEntry<Symbol*, mtSymbol>* e = bucket(index); e != NULL; e = e->next()) {
     count++;  // count all entries in this bucket, not just ones with same hash
-    if (e->hash() == hash) {
+    if (e->hash() == hash) { // 先根据hash
       Symbol* sym = e->literal();
-      if (sym->equals(name, len)) {
+      if (sym->equals(name, len)) { //判断值是否相等
         // something is referencing this symbol now.
-        sym->increment_refcount();
+        sym->increment_refcount(); // 引用数+1
         return sym;
       }
     }
   }
   // If the bucket size is too deep check if this hash code is insufficient.
   if (count >= rehash_count && !needs_rehashing()) {
-    _needs_rehashing = check_rehash_table(count);
+    _needs_rehashing = check_rehash_table(count); // rehash
   }
   return NULL;
 }
@@ -409,20 +409,20 @@ Symbol* SymbolTable::basic_add(int index_arg, u1 *name, int len,
   if (test != NULL) {
     // A race occurred and another thread introduced the symbol.
     assert(test->refcount() != 0, "lookup should have incremented the count");
-    return test;
+    return test; // 已存在 直接返回
   }
 
   // Create a new symbol.
-  Symbol* sym = allocate_symbol(name, len, c_heap, CHECK_NULL);
+  Symbol* sym = allocate_symbol(name, len, c_heap, CHECK_NULL); // 分配内存 创建symbol
   assert(sym->equals((char*)name, len), "symbol must be properly initialized");
 
   HashtableEntry<Symbol*, mtSymbol>* entry = new_entry(hashValue, sym);
-  add_entry(index, entry);
+  add_entry(index, entry); // 添加
   return sym;
 }
-
+// 每个类加载器都会对应一个ClassLoaderData的数据结构，里面会存譬如具体的类加载器对象，加载的klass，管理内存的metaspace等
 // This version of basic_add adds symbols in batch from the constant pool
-// parsing.
+// parsing.  解析class文件的时候调用这里
 bool SymbolTable::basic_add(ClassLoaderData* loader_data, constantPoolHandle cp,
                             int names_count,
                             const char** names, int* lengths,
@@ -440,7 +440,7 @@ bool SymbolTable::basic_add(ClassLoaderData* loader_data, constantPoolHandle cp,
   // Cannot hit a safepoint in this function because the "this" pointer can move.
   No_Safepoint_Verifier nsv;
 
-  for (int i=0; i<names_count; i++) {
+  for (int i=0; i<names_count; i++) {  // 本次解析的string常量数量
     // Check if the symbol table has been rehashed, if so, need to recalculate
     // the hash value.
     unsigned int hashValue;
@@ -451,17 +451,17 @@ bool SymbolTable::basic_add(ClassLoaderData* loader_data, constantPoolHandle cp,
     }
     // Since look-up was done lock-free, we need to check if another
     // thread beat us in the race to insert the symbol.
-    int index = hash_to_index(hashValue);
-    Symbol* test = lookup(index, names[i], lengths[i], hashValue);
+    int index = hash_to_index(hashValue); // 索引位置
+    Symbol* test = lookup(index, names[i], lengths[i], hashValue); // 常量池是否存在
     if (test != NULL) {
       // A race occurred and another thread introduced the symbol, this one
       // will be dropped and collected. Use test instead.
       cp->symbol_at_put(cp_indices[i], test);
       assert(test->refcount() != 0, "lookup should have incremented the count");
-    } else {
-      // Create a new symbol.  The null class loader is never unloaded so these
-      // are allocated specially in a permanent arena.
-      bool c_heap = !loader_data->is_the_null_class_loader_data();
+    } else { // 不存在 Symbol
+      // Create a new symbol.  The null class loader is never unloaded so these  创建1个新的symbol,空的classLoader永远不会卸载，因此这些专门分配在永久代
+      // are allocated specially in a permanent arena.   // java8的metaspace是为了取代permanent
+      bool c_heap = !loader_data->is_the_null_class_loader_data();  // 是否存在类加载器
       Symbol* sym = allocate_symbol((const u1*)names[i], lengths[i], c_heap, CHECK_(false));
       assert(sym->equals(names[i], lengths[i]), "symbol must be properly initialized");  // why wouldn't it be???
       HashtableEntry<Symbol*, mtSymbol>* entry = new_entry(hashValue, sym);
@@ -693,7 +693,7 @@ oop StringTable::basic_add(int index_arg, Handle string, jchar* name,
   }
 
   HashtableEntry<oop, mtSymbol>* entry = new_entry(hashValue, string());
-  add_entry(index, entry);
+  add_entry(index, entry); // 指定位置
   return string();
 }
 

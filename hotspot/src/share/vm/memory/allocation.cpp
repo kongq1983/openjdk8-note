@@ -436,7 +436,7 @@ void Chunk::start_chunk_pool_cleaner_task() {
   ChunkPoolCleaner* cleaner = new ChunkPoolCleaner();
   cleaner->enroll();
 }
-
+// Arena是使用malloc分配的内存块
 //------------------------------Arena------------------------------------------
 Arena::Arena(MEMFLAGS flag, size_t init_size) : _flags(flag), _size_in_bytes(0)  {
   size_t round_size = (sizeof (char *)) - 1;

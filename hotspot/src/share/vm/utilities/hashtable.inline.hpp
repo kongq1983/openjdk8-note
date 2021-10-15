@@ -101,8 +101,8 @@ template <MEMFLAGS F> inline void BasicHashtable<F>::set_entry(int index, BasicH
 
 
 template <MEMFLAGS F> inline void BasicHashtable<F>::add_entry(int index, BasicHashtableEntry<F>* entry) {
-  entry->set_next(bucket(index));
-  _buckets[index].set_entry(entry);
+  entry->set_next(bucket(index)); // bucket存放的是BasicHashtableEntry
+  _buckets[index].set_entry(entry); //
   ++_number_of_entries;
 }
 
