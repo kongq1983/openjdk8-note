@@ -61,6 +61,6 @@ Java_java_lang_Object_getClass(JNIEnv *env, jobject this)
         JNU_ThrowNullPointerException(env, NULL);
         return 0;
     } else {
-        return (*env)->GetObjectClass(env, this);
+        return (*env)->GetObjectClass(env, this);  //todo Object.getClass()
     }
 }

@@ -94,7 +94,7 @@
 // Extension method support.
 #define JAVA_8_VERSION                    52
 
-void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) {
+void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) { // 常量池
   // Use a local copy of ClassFileStream. It helps the C++ compiler to optimize
   // this function (_current can be allocated in a register, with scalar
   // replacement of aggregates). The _current pointer is copied back to
@@ -109,14 +109,14 @@ void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) {
 #endif
   Handle class_loader(THREAD, _loader_data->class_loader());
 
-  // Used for batching symbol allocations.
+  // Used for batching symbol allocations.   symbol_alloc_batch_size默认8
   const char* names[SymbolTable::symbol_alloc_batch_size];
   int lengths[SymbolTable::symbol_alloc_batch_size];
   int indices[SymbolTable::symbol_alloc_batch_size];
   unsigned int hashValues[SymbolTable::symbol_alloc_batch_size];
   int names_count = 0;
 
-  // parsing  Index 0 is unused
+  // parsing  Index 0 is unused  从1开始
   for (int index = 1; index < length; index++) {
     // Each of the following case guarantees one more byte in the stream
     // for the following tag or the access_flags following constant pool,
@@ -206,14 +206,14 @@ void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) {
           _cp->invoke_dynamic_at_put(index, bootstrap_specifier_index, name_and_type_index);
         }
         break;
-      case JVM_CONSTANT_Integer :
+      case JVM_CONSTANT_Integer : // 3    u1 tag;  u4 bytes;
         {
           cfs->guarantee_more(5, CHECK);  // bytes, tag/access_flags
-          u4 bytes = cfs->get_u4_fast();
-          _cp->int_at_put(index, (jint) bytes);
+          u4 bytes = cfs->get_u4_fast();   // Read u4 from stream
+          _cp->int_at_put(index, (jint) bytes);  // index 从1开始
         }
         break;
-      case JVM_CONSTANT_Float :
+      case JVM_CONSTANT_Float : // u1 tag;  u4 bytes;
         {
           cfs->guarantee_more(5, CHECK);  // bytes, tag/access_flags
           u4 bytes = cfs->get_u4_fast();
@@ -254,9 +254,9 @@ void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) {
         break;
       case JVM_CONSTANT_Utf8 :
         {
-          cfs->guarantee_more(2, CHECK);  // utf8_length
-          u2  utf8_length = cfs->get_u2_fast();
-          u1* utf8_buffer = cfs->get_u1_buffer();
+          cfs->guarantee_more(2, CHECK);  // utf8_length  确保足够字节数
+          u2  utf8_length = cfs->get_u2_fast(); //  Read u2 from stream
+          u1* utf8_buffer = cfs->get_u1_buffer(); // return _current;
           assert(utf8_buffer != NULL, "null utf8 buffer");
           // Got utf8 string, guarantee utf8_length+1 bytes, set stream position forward.
           cfs->guarantee_more(utf8_length+1, CHECK);  // utf8 string, tag/access_flags
@@ -277,20 +277,20 @@ void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) {
             utf8_buffer = (u1*) str;
             utf8_length = (int) strlen(str);
           }
-
-          unsigned int hash;
-          Symbol* result = SymbolTable::lookup_only((char*)utf8_buffer, utf8_length, hash);
-          if (result == NULL) {
-            names[names_count] = (char*)utf8_buffer;
-            lengths[names_count] = utf8_length;
-            indices[names_count] = index;
-            hashValues[names_count++] = hash;
-            if (names_count == SymbolTable::symbol_alloc_batch_size) {
+           // 每个string常量会放2个地方  symbol_at_put   SymbolTable::lookup_only(HashtableEntry)
+          unsigned int hash; //每个Symbol理解为String    Symbol*理解String列表  通过hash定位
+          Symbol* result = SymbolTable::lookup_only((char*)utf8_buffer, utf8_length, hash); // 创建  name,length,hash
+          if (result == NULL) { // 不存在   names_count从0开始 新解析1个字符串 names_count++    把result放入常量池
+            names[names_count] = (char*)utf8_buffer; // 值
+            lengths[names_count] = utf8_length;  // 长度
+            indices[names_count] = index;  // 索引
+            hashValues[names_count++] = hash;  //hash     // 然后names_count++
+            if (names_count == SymbolTable::symbol_alloc_batch_size) {  // ==8
               SymbolTable::new_symbols(_loader_data, _cp, names_count, names, lengths, indices, hashValues, CHECK);
               names_count = 0;
             }
           } else {
-            _cp->symbol_at_put(index, result);
+            _cp->symbol_at_put(index, result); // string 指向同个Symbol对象
           }
         }
         break;
@@ -301,7 +301,7 @@ void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) {
     }
   }
 
-  // Allocate the remaining symbols
+  // Allocate the remaining symbols  全部解析完成  这里其实为了symbol_at_put，如果只有1个 ，在symbol_at_put是不存在symbol
   if (names_count > 0) {
     SymbolTable::new_symbols(_loader_data, _cp, names_count, names, lengths, indices, hashValues, CHECK);
   }

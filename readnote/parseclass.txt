@@ -1,0 +1,106 @@
+
+classFileParser.cpp
+openjdk8\hotspot\src\share\vm\classfile\classFileParser.hpp
+openjdk8\hotspot\src\share\vm\classfile\classFileParser.cpp
+
+
+
+
+
+
+openjdk8\hotspot\src\share\vm\classfi\classFileStream.hpp
+guarantee_more 确保字节数足够  usize > remaining
+void guarantee_more(int size, TRAPS) {
+    size_t remaining = (size_t)(_buffer_end - _current);
+    unsigned int usize = (unsigned int)size;
+    check_truncated_file(usize > remaining, CHECK);
+}
+
+u2  utf8_length = cfs->get_u2_fast(); //  Read u2 from stream
+
+
+u1* get_u1_buffer() {
+    return _current;
+  }
+
+u2* get_u2_buffer() {
+return (u2*) _current;
+}
+
+
+
+
+openjdk8\hotspot\src\share\vm\oops\constantPool.hpp
+常量池  ConstantPool*    _cp
+====================================================================================================
+关注这句:
+intptr_t* base() const { return (intptr_t*) (((char*) this) + sizeof(ConstantPool)); }
+
+// which=index
+jint* int_at_addr(int which) const {
+    assert(is_within_bounds(which), "index out of bounds");
+    return (jint*) &base()[which];
+}
+
+// which=index   i = value
+void int_at_put(int which, jint i) {
+    tag_at_put(which, JVM_CONSTANT_Integer);  // 索引值
+    *int_at_addr(which) = i;  //  &base()[which] = i
+}
+
+index 从1开始
+
+
+void symbol_at_put(int which, Symbol* s) {
+  assert(s->refcount() != 0, "should have nonzero refcount");
+  tag_at_put(which, JVM_CONSTANT_Utf8); // 索引值
+  *symbol_at_addr(which) = s;
+}
+
+Symbol** symbol_at_addr(int which) const {
+assert(is_within_bounds(which), "index out of bounds");
+return (Symbol**) &base()[which];
+}
+====================================================================================================
+**************
+symbol_at_put
+另外1个Symbol
+
+====================================================================================================
+
+# string存放
+// Used for batching symbol allocations.   symbol_alloc_batch_size默认8
+const char* names[SymbolTable::symbol_alloc_batch_size];
+int lengths[SymbolTable::symbol_alloc_batch_size];
+int indices[SymbolTable::symbol_alloc_batch_size];
+unsigned int hashValues[SymbolTable::symbol_alloc_batch_size];
+
+赋值- 如果重复的不会放这里的
+names[names_count] = (char*)utf8_buffer; // 值
+lengths[names_count] = utf8_length;  // 长度
+indices[names_count] = index;  // 索引
+hashValues[names_count++] = hash;  //hash     // 然后names_count++
+
+第2个同名字符串开始放这里
+ _cp->symbol_at_put(index, result);
+
+
+ static SymbolTable* the_table() { return _the_table; }
+
+   // Size of one bucket in the string table.  Used when checking for rollover.
+   static uint bucket_size() { return sizeof(HashtableBucket<mtSymbol>); }
+
+   static void create_table() {
+     assert(_the_table == NULL, "One symbol table allowed.");
+     _the_table = new SymbolTable();
+     initialize_symbols(symbol_alloc_arena_size);
+   }
+
+  内存管理：ClassLoaderData
+  ClassLoaderData负责初始化并销毁一个ClassLoader实例对应的Metaspace，是GC的根节点，提供引用遍历的迭代器
+
+
+  static ClassLoaderData * _the_null_class_loader_data; //启动类加载器对应的ClassLoaderData
+  oop _class_loader；//关联的Java ClassLoader实例
+
+

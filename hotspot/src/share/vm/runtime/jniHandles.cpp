@@ -66,7 +66,7 @@ jobject JNIHandles::make_local(JNIEnv* env, oop obj) {
   } else {
     JavaThread* thread = JavaThread::thread_from_jni_environment(env);
     assert(Universe::heap()->is_in_reserved(obj), "sanity check");
-    return thread->active_handles()->allocate_handle(obj);
+    return thread->active_handles()->allocate_handle(obj); // this file : 416  // //通过线程获取JNI句柄
   }
 }
 
@@ -411,11 +411,11 @@ void JNIHandleBlock::weak_oops_do(BoolObjectClosure* is_alive,
    */
   JvmtiExport::weak_oops_do(is_alive, f);
 }
-
-
+// 1. 当对Oop直接引用时，如果Oop的地址发生变化，那么所有的引用都要更新  2. 当通过Handle对Oop间接引用时，如果Oop的地址发生变化，那么只需要更新Handle中保存的对Oop的引用即可
+// 3. Handle理解成访问对象的一个“句柄”  4. 每个Oop都有一个对应的Handle，这样通过对应的Handle可直接获取对应的Oop，不需要进行类型转换
 jobject JNIHandleBlock::allocate_handle(oop obj) {
   assert(Universe::heap()->is_in_reserved(obj), "sanity check");
-  if (_top == 0) {
+  if (_top == 0) { //这是进入本机函数时的第一个分配或初始化的初始块。 // 如果我们有以下任何块，则它们不再有效。
     // This is the first allocation or the initial block got zapped when
     // entering a native function. If we have any following blocks they are
     // not valid anymore.
@@ -428,42 +428,42 @@ jobject JNIHandleBlock::allocate_handle(oop obj) {
       if (ZapJNIHandleArea) current->zap();
     }
     // Clear initial block
-    _free_list = NULL;
+    _free_list = NULL; // 清除初始块
     _allocate_before_rebuild = 0;
     _last = this;
     if (ZapJNIHandleArea) zap();
   }
 
   // Try last block
-  if (_last->_top < block_size_in_oops) {
+  if (_last->_top < block_size_in_oops) { // 尝试最后一个块
     oop* handle = &(_last->_handles)[_last->_top++];
     *handle = obj;
     return (jobject) handle;
   }
 
   // Try free list
-  if (_free_list != NULL) {
+  if (_free_list != NULL) { // 尝试空闲列表
     oop* handle = _free_list;
     _free_list = (oop*) *_free_list;
     *handle = obj;
     return (jobject) handle;
   }
   // Check if unused block follow last
-  if (_last->_next != NULL) {
+  if (_last->_next != NULL) {  // 检查未使用的块是否紧随其后
     // update last and retry
-    _last = _last->_next;
+    _last = _last->_next; // 最后更新并重试
     return allocate_handle(obj);
   }
 
   // No space available, we have to rebuild free list or expand
-  if (_allocate_before_rebuild == 0) {
-      rebuild_free_list();        // updates _allocate_before_rebuild counter
+  if (_allocate_before_rebuild == 0) { // 没有可用空间，我们必须重建空闲列表或扩展
+      rebuild_free_list();        // updates _allocate_before_rebuild counter  // 更新_allocate_before_rebuild计数器
   } else {
-    // Append new block
+    // Append new block  追加新块
     Thread* thread = Thread::current();
     Handle obj_handle(thread, obj);
     // This can block, so we need to preserve obj accross call.
-    _last->_next = JNIHandleBlock::allocate_block(thread);
+    _last->_next = JNIHandleBlock::allocate_block(thread);  // 这里可能会阻塞，因此我们需要在整个调用期间保留obj。
     _last = _last->_next;
     _allocate_before_rebuild--;
     obj = obj_handle();

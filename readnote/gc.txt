@@ -1,0 +1,36 @@
+
+ClassLoaderData::~ClassLoaderData() {
+  //遍历该ClassLoader加载的所有Klass，执行release_C_heap_structures方法
+  classes_do(InstanceKlass::release_C_heap_structures);
+
+  Metaspace *m = _metaspace;
+  if (m != NULL) {
+    _metaspace = NULL;
+    //释放Metaspace
+    delete m;
+  }
+
+  if (_jmethod_ids != NULL) {
+    //释放_jmethod_ids
+    Method::clear_jmethod_ids(this);
+  }
+  //删除 lock
+  delete _metaspace_lock;
+
+  if (_deallocate_list != NULL) {
+    delete _deallocate_list;
+  }
+}
+
+void ClassLoaderData::classes_do(void f(InstanceKlass*)) {
+  //遍历所有加载的类
+  for (Klass* k = _klasses; k != NULL; k = k->next_link()) {
+    if (k->oop_is_instance()) {
+      f(InstanceKlass::cast(k));
+    }
+    assert(k != k->next_link(), "no loops!");
+  }
+}
+
+
+每个类加载器都会对应一个ClassLoaderData的数据结构，里面会存譬如具体的类加载器对象，加载的klass，管理内存的metaspace等，它是一个链式结构，会链到下一个ClassLoaderData上，gc的时候通过ClassLoaderDataGraph来遍历这些ClassLoaderData，ClassLoaderDataGraph的第一个ClassLoaderData是bootstrapClassLoader的
