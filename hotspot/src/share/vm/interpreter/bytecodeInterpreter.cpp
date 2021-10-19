@@ -679,12 +679,12 @@ BytecodeInterpreter::run(interpreterState istate) {
 #endif // HACK
 
       // Lock method if synchronized.
-      if (METHOD->is_synchronized()) {
+      if (METHOD->is_synchronized()) {  //方法上有synchronized
         // oop rcvr = locals[0].j.r;
         oop rcvr;
-        if (METHOD->is_static()) {
+        if (METHOD->is_static()) { //是static 方法  //根据当前常量池所属的Klass实例获取加载该Klass实例
           rcvr = METHOD->constants()->pool_holder()->java_mirror();
-        } else {
+        } else { // 非static方法
           rcvr = LOCALS_OBJECT(0);
           VERIFY_OOP(rcvr);
         }

@@ -66,7 +66,7 @@ Symbol* SymbolTable::allocate_symbol(const u1* name, int len, bool c_heap, TRAPS
     assert(sym != NULL, "new should call vm_exit_out_of_memory if C_HEAP is exhausted");
   } else { // Arena是使用malloc分配的内存块  相当于直接内存
     // Allocate to global arena
-    sym = new (len, arena(), THREAD) Symbol(name, len, -1);
+    sym = new (len, arena(), THREAD) Symbol(name, len, -1); // 解析class的时候，string调用这里
   }
   return sym;
 }
@@ -413,7 +413,7 @@ Symbol* SymbolTable::basic_add(int index_arg, u1 *name, int len,
   }
 
   // Create a new symbol.
-  Symbol* sym = allocate_symbol(name, len, c_heap, CHECK_NULL); // 分配内存 创建symbol
+  Symbol* sym = allocate_symbol(name, len, c_heap, CHECK_NULL); // 分配直接内存 创建symbol
   assert(sym->equals((char*)name, len), "symbol must be properly initialized");
 
   HashtableEntry<Symbol*, mtSymbol>* entry = new_entry(hashValue, sym);
@@ -431,7 +431,7 @@ bool SymbolTable::basic_add(ClassLoaderData* loader_data, constantPoolHandle cp,
 
   // Check symbol names are not too long.  If any are too long, don't add any.
   for (int i = 0; i< names_count; i++) {
-    if (lengths[i] > Symbol::max_length()) { // 不能大于 Symbol.max_length
+    if (lengths[i] > Symbol::max_length()) { // 不能大于 Symbol.max_length  max_symbol_length = (1 << 16) -1 = 65535  symbol.hpp : 125
       THROW_MSG_0(vmSymbols::java_lang_InternalError(),
                   "name is too long to represent");
     }
@@ -462,7 +462,7 @@ bool SymbolTable::basic_add(ClassLoaderData* loader_data, constantPoolHandle cp,
       // Create a new symbol.  The null class loader is never unloaded so these  创建1个新的symbol,空的classLoader永远不会卸载，因此这些专门分配在永久代
       // are allocated specially in a permanent arena.   // java8的metaspace是为了取代permanent
       bool c_heap = !loader_data->is_the_null_class_loader_data();  // 是否存在类加载器
-      Symbol* sym = allocate_symbol((const u1*)names[i], lengths[i], c_heap, CHECK_(false));
+      Symbol* sym = allocate_symbol((const u1*)names[i], lengths[i], c_heap, CHECK_(false)); // 分配直接内存
       assert(sym->equals(names[i], lengths[i]), "symbol must be properly initialized");  // why wouldn't it be???
       HashtableEntry<Symbol*, mtSymbol>* entry = new_entry(hashValue, sym);
       add_entry(index, entry);
