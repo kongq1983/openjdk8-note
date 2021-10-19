@@ -74,7 +74,7 @@ Java_java_nio_MappedByteBuffer_load0(JNIEnv *env, jobject obj, jlong address,
                                      jlong len)
 {
     char *a = (char *)jlong_to_ptr(address);
-    int result = madvise((caddr_t)a, (size_t)len, MADV_WILLNEED);
+    int result = madvise((caddr_t)a, (size_t)len, MADV_WILLNEED); // 给操作系统建议，说这文件在不久的将来要访问的，因此，提前读几页可能是个好主意
     if (result == -1) {
         JNU_ThrowIOExceptionWithLastError(env, "madvise failed");
     }
@@ -86,7 +86,7 @@ Java_java_nio_MappedByteBuffer_force0(JNIEnv *env, jobject obj, jobject fdo,
                                       jlong address, jlong len)
 {
     void* a = (void *)jlong_to_ptr(address);
-    int result = msync(a, (size_t)len, MS_SYNC);
+    int result = msync(a, (size_t)len, MS_SYNC); // 内容写回磁盘  调用会等到更新完成之后返回
     if (result == -1) {
         JNU_ThrowIOExceptionWithLastError(env, "msync failed");
     }
