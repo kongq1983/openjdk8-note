@@ -160,7 +160,7 @@ Java_sun_nio_ch_FileChannelImpl_transferTo0(JNIEnv *env, jobject this,
 {
 #if defined(__linux__)
     off64_t offset = (off64_t)position;
-    jlong n = sendfile64(dstFD, srcFD, &offset, (size_t)count);
+    jlong n = sendfile64(dstFD, srcFD, &offset, (size_t)count);  // 零拷贝
     if (n < 0) {
         if (errno == EAGAIN)
             return IOS_UNAVAILABLE;

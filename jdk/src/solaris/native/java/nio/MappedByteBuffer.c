@@ -41,7 +41,7 @@ Java_java_nio_MappedByteBuffer_isLoaded0(JNIEnv *env, jobject obj, jlong address
     int i = 0;
     void *a = (void *) jlong_to_ptr(address);
 #ifdef __linux__
-    unsigned char *vec = (unsigned char *)malloc(numPages * sizeof(char));
+    unsigned char *vec = (unsigned char *)malloc(numPages * sizeof(char)); // 分配内存
 #else
     char *vec = (char *)malloc(numPages * sizeof(char));
 #endif
@@ -51,20 +51,20 @@ Java_java_nio_MappedByteBuffer_isLoaded0(JNIEnv *env, jobject obj, jlong address
         return JNI_FALSE;
     }
 
-    result = mincore(a, (size_t)len, vec);
+    result = mincore(a, (size_t)len, vec); // 用来确定一个给定范围的内存是在物理内存中还是被交换到了硬盘中
     if (result == -1) {
         JNU_ThrowIOExceptionWithLastError(env, "mincore failed");
         free(vec);
         return JNI_FALSE;
     }
 
-    for (i=0; i<numPages; i++) {
-        if (vec[i] == 0) {
+    for (i=0; i<numPages; i++) { // vec的每个字节对应指定区域内的一个页面，第一个字节对应着第一个页面，然后依次对应
+        if (vec[i] == 0) {  // 如果页面在物理内存中，对应字节的最低位是1,否则是0
             loaded = JNI_FALSE;
             break;
         }
     }
-    free(vec);
+    free(vec); // 释放vec的内存
     return loaded;
 }
 

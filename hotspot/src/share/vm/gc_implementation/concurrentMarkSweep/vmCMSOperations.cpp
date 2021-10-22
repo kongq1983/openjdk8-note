@@ -136,7 +136,7 @@ void VM_CMS_Operation::doit_epilogue() {
 }
 
 //////////////////////////////////////////////////////////
-// Methods in class VM_CMS_Initial_Mark
+// Methods in class VM_CMS_Initial_Mark  todo cms 初始标记
 //////////////////////////////////////////////////////////
 void VM_CMS_Initial_Mark::doit() {
   if (lost_race()) {
@@ -157,7 +157,7 @@ void VM_CMS_Initial_Mark::doit() {
 
   VM_CMS_Operation::verify_before_gc();
 
-  IsGCActiveMark x; // stop-world GC active
+  IsGCActiveMark x; // stop-world GC active  todo stw   gc活动
   _collector->do_CMS_operation(CMSCollector::CMS_op_checkpointRootsInitial, gch->gc_cause());
 
   VM_CMS_Operation::verify_after_gc();
