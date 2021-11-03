@@ -266,9 +266,9 @@ protected:
 
     const bool non_zero      = word_size > 0;
     const bool overflows     = word_size >= overflow_limit;
-    const bool check_too_big = _pretenure_size_threshold_words > 0;
+    const bool check_too_big = _pretenure_size_threshold_words > 0;  // _pretenure_size_threshold_words    -XX: PretenureSizeThreshold的值
     const bool not_too_big   = word_size < _pretenure_size_threshold_words;
-    const bool size_ok       = is_tlab || !check_too_big || not_too_big;
+    const bool size_ok       = is_tlab || !check_too_big || not_too_big; // is_tlab=true || PretenureSizeThreshold非0 || 小对象
 
     bool result = !overflows &&
                   non_zero   &&

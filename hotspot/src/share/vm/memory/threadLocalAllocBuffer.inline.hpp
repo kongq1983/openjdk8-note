@@ -34,14 +34,14 @@
 inline HeapWord* ThreadLocalAllocBuffer::allocate(size_t size) {
   invariants();
   HeapWord* obj = top();
-  if (pointer_delta(end(), obj) >= size) {
+  if (pointer_delta(end(), obj) >= size) {  // globalDefinitions.hpp : 309
     // successful thread-local allocation
 #ifdef ASSERT
     // Skip mangling the space corresponding to the object header to
     // ensure that the returned space is not considered parsable by
     // any concurrent GC thread.
     size_t hdr_size = oopDesc::header_size();
-    Copy::fill_to_words(obj + hdr_size, size - hdr_size, badHeapWordVal);
+    Copy::fill_to_words(obj + hdr_size, size - hdr_size, badHeapWordVal); // 填充
 #endif // ASSERT
     // This addition is safe because we know that top is
     // at least size below end, so the add can't wrap.

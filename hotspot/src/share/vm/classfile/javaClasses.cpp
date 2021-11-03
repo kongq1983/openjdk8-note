@@ -160,7 +160,7 @@ void java_lang_String::compute_offsets() {
 
   initialized = true;
 }
-
+// 与new构造逻辑并无二致
 Handle java_lang_String::basic_create(int length, TRAPS) {
   assert(initialized, "Must be initialized");
   // Create the String object first, so there's a chance that the String

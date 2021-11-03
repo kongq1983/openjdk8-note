@@ -193,13 +193,13 @@ DefNewGeneration::DefNewGeneration(ReservedSpace rs,
                 (HeapWord*)_virtual_space.high());
   Universe::heap()->barrier_set()->resize_covered_region(cmr);
 
-  if (GenCollectedHeap::heap()->collector_policy()->has_soft_ended_eden()) {
+  if (GenCollectedHeap::heap()->collector_policy()->has_soft_ended_eden()) { // 默认false
     _eden_space = new ConcEdenSpace(this);
   } else {
-    _eden_space = new EdenSpace(this);
+    _eden_space = new EdenSpace(this); // Eden
   }
-  _from_space = new ContiguousSpace();
-  _to_space   = new ContiguousSpace();
+  _from_space = new ContiguousSpace(); // 创建From内存区管理器
+  _to_space   = new ContiguousSpace(); // 创建To内存区管理器
 
   if (_eden_space == NULL || _from_space == NULL || _to_space == NULL)
     vm_exit_during_initialization("Could not allocate a new gen space");
@@ -209,12 +209,12 @@ DefNewGeneration::DefNewGeneration(ReservedSpace rs,
   // These values are exported as performance counters.
   uintx alignment = GenCollectedHeap::heap()->collector_policy()->space_alignment();
   uintx size = _virtual_space.reserved_size();
-  _max_survivor_size = compute_survivor_size(size, alignment);
-  _max_eden_size = size - (2*_max_survivor_size);
+  _max_survivor_size = compute_survivor_size(size, alignment); // 计算From区和To区的最大大小
+  _max_eden_size = size - (2*_max_survivor_size); // //Eden区最大大小
 
   // allocate the performance counters
 
-  // Generation counters -- generation 0, 3 subspaces
+  // Generation counters -- generation 0, 3 subspaces  创建相关的计数器
   _gen_counters = new GenerationCounters("new", 0, 3, &_virtual_space);
   _gc_counters = new CollectorCounters(policy, 0);
 
@@ -224,16 +224,16 @@ DefNewGeneration::DefNewGeneration(ReservedSpace rs,
                                       _gen_counters);
   _to_counters = new CSpaceCounters("s1", 2, _max_survivor_size, _to_space,
                                     _gen_counters);
-
+  // 分配对应的物理内存区
   compute_space_boundaries(0, SpaceDecorator::Clear, SpaceDecorator::Mangle);
   update_counters();
   _next_gen = NULL;
-  _tenuring_threshold = MaxTenuringThreshold;
-  _pretenure_size_threshold_words = PretenureSizeThreshold >> LogHeapWordSize;
+  _tenuring_threshold = MaxTenuringThreshold; // 进入老年代的阀值
+  _pretenure_size_threshold_words = PretenureSizeThreshold >> LogHeapWordSize;  // 判断是否大对象的值   LogHeapWordSize=3 右移3位
 
   _gc_timer = new (ResourceObj::C_HEAP, mtGC) STWGCTimer();
 }
-
+// compute_space_boundaries方法会保证eden区的内存足够大
 void DefNewGeneration::compute_space_boundaries(uintx minimum_eden_size,
                                                 bool clear_space,
                                                 bool mangle_space) {
@@ -1070,7 +1070,7 @@ HeapWord* DefNewGeneration::allocate(size_t word_size,
   }
   return result;
 }
-
+// todo 分配内存
 HeapWord* DefNewGeneration::par_allocate(size_t word_size,
                                          bool is_tlab) {
   HeapWord* res = eden()->par_allocate(word_size);

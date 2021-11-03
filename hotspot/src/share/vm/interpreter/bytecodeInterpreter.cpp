@@ -2345,9 +2345,9 @@ run:
             SET_STACK_FLOAT(constants->float_at(index), 0);
             break;
 
-          case JVM_CONSTANT_String:
+          case JVM_CONSTANT_String: // todo string
             {
-              oop result = constants->resolved_references()->obj_at(index);
+              oop result = constants->resolved_references()->obj_at(index); // 从常量池取
               if (result == NULL) {
                 CALL_VM(InterpreterRuntime::resolve_ldc(THREAD, (Bytecodes::Code) opcode), handle_exception);
                 SET_STACK_OBJECT(THREAD->vm_result(), 0);

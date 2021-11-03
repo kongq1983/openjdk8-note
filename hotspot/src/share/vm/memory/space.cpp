@@ -704,9 +704,9 @@ inline HeapWord* ContiguousSpace::par_allocate_impl(size_t size,
                                                     HeapWord* const end_value) {
   do {
     HeapWord* obj = top();
-    if (pointer_delta(end_value, obj) >= size) {
+    if (pointer_delta(end_value, obj) >= size) { // 是否有足够的空间
       HeapWord* new_top = obj + size;
-      HeapWord* result = (HeapWord*)Atomic::cmpxchg_ptr(new_top, top_addr(), obj);
+      HeapWord* result = (HeapWord*)Atomic::cmpxchg_ptr(new_top, top_addr(), obj); // cas操作  分配内存
       // result can be one of two:
       //  the old top value: the exchange succeeded
       //  otherwise: the new value of the top is returned.

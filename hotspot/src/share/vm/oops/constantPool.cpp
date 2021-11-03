@@ -827,7 +827,7 @@ oop ConstantPool::string_at_impl(constantPoolHandle this_oop, int which, int obj
   oop str = this_oop->resolved_references()->obj_at(obj_index);
   if (str != NULL) return str;
   Symbol* sym = this_oop->unresolved_string_at(which);
-  str = StringTable::intern(sym, CHECK_(NULL));
+  str = StringTable::intern(sym, CHECK_(NULL)); // intern终于出现了
   this_oop->string_at_put(which, obj_index, str);
   assert(java_lang_String::is_instance(str), "must be string");
   return str;

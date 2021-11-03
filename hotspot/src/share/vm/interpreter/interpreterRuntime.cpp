@@ -123,7 +123,7 @@ IRT_ENTRY(void, InterpreterRuntime::ldc(JavaThread* thread, bool wide))
     oop java_class = klass->java_mirror();
     thread->set_vm_result(java_class);
 IRT_END
-
+// 这里 JVM_CONSTANT_String 有调用
 IRT_ENTRY(void, InterpreterRuntime::resolve_ldc(JavaThread* thread, Bytecodes::Code bytecode)) {
   assert(bytecode == Bytecodes::_fast_aldc ||
          bytecode == Bytecodes::_fast_aldc_w, "wrong bc");
@@ -146,10 +146,10 @@ IRT_END
 
 //------------------------------------------------------------------------------------------------------------------------
 // Allocation
-
+// todo new 指令  java new关键字的方法,本质上在java使用new关键字时会调用这个方法
 IRT_ENTRY(void, InterpreterRuntime::_new(JavaThread* thread, ConstantPool* pool, int index))
-  Klass* k_oop = pool->klass_at(index, CHECK);
-  instanceKlassHandle klass (THREAD, k_oop);
+  Klass* k_oop = pool->klass_at(index, CHECK); // 先会去常量池（这里的常量池其实运行时常量池）中查找Klass的信息
+  instanceKlassHandle klass (THREAD, k_oop); // 然后将其包装成instanceKlassHandle句柄,其实就是klass包装类
 
   // Make sure we are not instantiating an abstract klass
   klass->check_valid_for_instantiation(true, CHECK);
@@ -171,8 +171,8 @@ IRT_ENTRY(void, InterpreterRuntime::_new(JavaThread* thread, ConstantPool* pool,
   //       Java).
   //       If we have a breakpoint, then we don't rewrite
   //       because the _breakpoint bytecode would be lost.
-  oop obj = klass->allocate_instance(CHECK);
-  thread->set_vm_result(obj);
+  oop obj = klass->allocate_instance(CHECK); // 调用申请对象的方法  关注这里 instanceKlass.cpp : 1116
+  thread->set_vm_result(obj); // 将申请的结果返回
 IRT_END
 
 

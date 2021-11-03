@@ -789,21 +789,21 @@ char* Universe::preferred_heap_base(size_t heap_size, size_t alignment, NARROW_O
   assert(is_ptr_aligned((char*)base, alignment), "Must be");
   return (char*)base; // also return NULL (don't care) for 32-bit VM
 }
-
+// todo 使用哪种分配内存的
 jint Universe::initialize_heap() {
 
-  if (UseParallelGC) {
+  if (UseParallelGC) { // -XX:+UseParallelGC
 #if INCLUDE_ALL_GCS
-    Universe::_collectedHeap = new ParallelScavengeHeap();
+    Universe::_collectedHeap = new ParallelScavengeHeap(); // ParallelScavengeHeap
 #else  // INCLUDE_ALL_GCS
     fatal("UseParallelGC not supported in this VM.");
 #endif // INCLUDE_ALL_GCS
 
-  } else if (UseG1GC) {
+  } else if (UseG1GC) {  // 使用g1
 #if INCLUDE_ALL_GCS
     G1CollectorPolicyExt* g1p = new G1CollectorPolicyExt();
     g1p->initialize_all();
-    G1CollectedHeap* g1h = new G1CollectedHeap(g1p);
+    G1CollectedHeap* g1h = new G1CollectedHeap(g1p); // G1CollectedHeap
     Universe::_collectedHeap = g1h;
 #else  // INCLUDE_ALL_GCS
     fatal("UseG1GC not supported in java kernel vm.");
@@ -812,24 +812,24 @@ jint Universe::initialize_heap() {
   } else {
     GenCollectorPolicy *gc_policy;
 
-    if (UseSerialGC) {
+    if (UseSerialGC) { // -XX:+UseSerialGC
       gc_policy = new MarkSweepPolicy();
-    } else if (UseConcMarkSweepGC) {
+    } else if (UseConcMarkSweepGC) {  // -XX:+UseConcMarkSweepGC  cms
 #if INCLUDE_ALL_GCS
-      if (UseAdaptiveSizePolicy) {
-        gc_policy = new ASConcurrentMarkSweepPolicy();
+      if (UseAdaptiveSizePolicy) { // 这个一般不用的
+        gc_policy = new ASConcurrentMarkSweepPolicy(); // 自适应并发标记-清除
       } else {
-        gc_policy = new ConcurrentMarkSweepPolicy();
+        gc_policy = new ConcurrentMarkSweepPolicy();  // 关注这个  并发标记-清除
       }
 #else  // INCLUDE_ALL_GCS
     fatal("UseConcMarkSweepGC not supported in this VM.");
 #endif // INCLUDE_ALL_GCS
     } else { // default old generation
-      gc_policy = new MarkSweepPolicy();
+      gc_policy = new MarkSweepPolicy(); // 标记-清除
     }
     gc_policy->initialize_all();
 
-    Universe::_collectedHeap = new GenCollectedHeap(gc_policy);
+    Universe::_collectedHeap = new GenCollectedHeap(gc_policy);  // 非UseParallelGC、UseG1GC   使用GenCollectedHeap
   }
 
   ThreadLocalAllocBuffer::set_max_size(Universe::heap()->max_tlab_size());
