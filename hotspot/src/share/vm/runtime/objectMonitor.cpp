@@ -954,15 +954,15 @@ void ObjectMonitor::UnlinkAfterAcquire (Thread * Self, ObjectWaiter * SelfNode)
 
 void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
    Thread * Self = THREAD ;
-   if (THREAD != _owner) {
-     if (THREAD->is_lock_owned((address) _owner)) {
+   if (THREAD != _owner) { // 如果当前线程不是Monitor的所有者
+     if (THREAD->is_lock_owned((address) _owner)) { // 如果当前线程是第一次进入该monitor，设置_recursions为1，_owner为当前线程
        // Transmute _owner from a BasicLock pointer to a Thread address.
        // We don't need to hold _mutex for this transition.
        // Non-null to Non-null is safe as long as all readers can
        // tolerate either flavor.
        assert (_recursions == 0, "invariant") ;
        _owner = THREAD ;
-       _recursions = 0 ;
+       _recursions = 0 ; // 释放
        OwnerIsThread = 1 ;
      } else {
        // NOTE: we need to handle unbalanced monitor enter/exit
@@ -976,8 +976,8 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
        return;
      }
    }
-
-   if (_recursions != 0) {
+   // 如果_recursions次数不为0.自减
+   if (_recursions != 0) { // 重入次数
      _recursions--;        // this is simple recursive enter
      TEVENT (Inflated exit - recursive) ;
      return ;

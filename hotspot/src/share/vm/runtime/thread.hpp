@@ -554,7 +554,7 @@ protected:
   void    set_stack_size(size_t size)  { _stack_size = size; }
   void    record_stack_base_and_size();
 
-  bool    on_local_stack(address adr) const {
+  bool    on_local_stack(address adr) const { // 在（_stack_base-_stack_size） 和 _stack_base 之间
     /* QQQ this has knowledge of direction, ought to be a stack method */
     return (_stack_base >= adr && adr >= (_stack_base - _stack_size));
   }
