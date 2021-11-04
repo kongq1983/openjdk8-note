@@ -213,7 +213,7 @@ BasicType Bytecode_loadconstant::result_type() const {
   constantTag tag = _method->constants()->tag_at(index);
   return tag.basic_type();
 }
-
+// todo java.string相关代码
 oop Bytecode_loadconstant::resolve_constant(TRAPS) const {
   assert(_method.not_null(), "must supply method to resolve constant");
   int index = raw_index();

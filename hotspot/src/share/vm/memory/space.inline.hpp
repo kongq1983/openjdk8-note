@@ -308,7 +308,7 @@ inline HeapWord* OffsetTableContigSpace::allocate(size_t size) {
   }
   return res;
 }
-
+// todo 内存分配
 // Because of the requirement of keeping "_offsets" up to date with the
 // allocations, we sequentialize these with a lock.  Therefore, best if
 // this is used for larger LAB allocations only.

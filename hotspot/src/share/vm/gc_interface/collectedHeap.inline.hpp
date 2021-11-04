@@ -109,7 +109,7 @@ void CollectedHeap::post_allocation_setup_array(KlassHandle klass,
   // notify jvmti and dtrace (must be after length is set for dtrace)
   post_allocation_notify(klass, new_obj, new_obj->size());
 }
-
+// todo new 指令 相关业务  collectedHeap定义了Java堆的实现
 HeapWord* CollectedHeap::common_mem_allocate_noinit(KlassHandle klass, size_t size, TRAPS) {
 
   // Clear unhandled oops for memory allocation.  Memory allocation might
@@ -122,16 +122,16 @@ HeapWord* CollectedHeap::common_mem_allocate_noinit(KlassHandle klass, size_t si
   }
 
   HeapWord* result = NULL;
-  if (UseTLAB) {
-    result = allocate_from_tlab(klass, THREAD, size);
+  if (UseTLAB) { // 是否开启tlab
+    result = allocate_from_tlab(klass, THREAD, size); // tlab分配
     if (result != NULL) {
       assert(!HAS_PENDING_EXCEPTION,
              "Unexpected exception, will result in uninitialized storage");
       return result;
     }
   }
-  bool gc_overhead_limit_was_exceeded = false;
-  result = Universe::heap()->mem_allocate(size,
+  bool gc_overhead_limit_was_exceeded = false; // Universe::heap()这个方法返回的是当前jvm使用的堆类，如果使用G1垃圾回收器，那这里返回的是g1CollectedHeap.cpp
+  result = Universe::heap()->mem_allocate(size, // 在堆中分配内存
                                           &gc_overhead_limit_was_exceeded);
   if (result != NULL) {
     NOT_PRODUCT(Universe::heap()->
@@ -170,24 +170,24 @@ HeapWord* CollectedHeap::common_mem_allocate_noinit(KlassHandle klass, size_t si
     THROW_OOP_0(Universe::out_of_memory_error_gc_overhead_limit());
   }
 }
-
+// todo new 指令 相关业务
 HeapWord* CollectedHeap::common_mem_allocate_init(KlassHandle klass, size_t size, TRAPS) {
-  HeapWord* obj = common_mem_allocate_noinit(klass, size, CHECK_NULL);
-  init_obj(obj, size);
+  HeapWord* obj = common_mem_allocate_noinit(klass, size, CHECK_NULL); // //先申请内存
+  init_obj(obj, size); // 字段填充
   return obj;
 }
 
 HeapWord* CollectedHeap::allocate_from_tlab(KlassHandle klass, Thread* thread, size_t size) {
   assert(UseTLAB, "should use UseTLAB");
 
-  HeapWord* obj = thread->tlab().allocate(size);
+  HeapWord* obj = thread->tlab().allocate(size); // threadLocalAllocBuffer.inline.hpp : 34
   if (obj != NULL) {
     return obj;
   }
   // Otherwise...
   return allocate_from_tlab_slow(klass, thread, size);
 }
-
+// 字段填充
 void CollectedHeap::init_obj(HeapWord* obj, size_t size) {
   assert(obj != NULL, "cannot initialize NULL object");
   const size_t hs = oopDesc::header_size();
@@ -195,12 +195,12 @@ void CollectedHeap::init_obj(HeapWord* obj, size_t size) {
   ((oop)obj)->set_klass_gap(0);
   Copy::fill_to_aligned_words(obj + hs, size - hs);
 }
-
+// todo 创建对象
 oop CollectedHeap::obj_allocate(KlassHandle klass, int size, TRAPS) {
   debug_only(check_for_valid_allocation_state());
   assert(!Universe::heap()->is_gc_active(), "Allocation during gc not allowed");
   assert(size >= 0, "int won't convert to size_t");
-  HeapWord* obj = common_mem_allocate_init(klass, size, CHECK_NULL);
+  HeapWord* obj = common_mem_allocate_init(klass, size, CHECK_NULL); // 申请内存并初始化对象
   post_allocation_setup_obj(klass, obj, size);
   NOT_PRODUCT(Universe::heap()->check_for_bad_heap_word_value(obj, size));
   return (oop)obj;

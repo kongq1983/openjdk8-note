@@ -86,7 +86,7 @@ jint GenCollectedHeap::initialize() {
   CollectedHeap::pre_initialize();
 
   int i;
-  _n_gens = gen_policy()->number_of_generations();
+  _n_gens = gen_policy()->number_of_generations(); // 2
 
   // While there are no constraints in the GC code that HeapWordSize
   // be any particular value, there are multiple other areas in the
@@ -315,13 +315,13 @@ void GenCollectedHeap::check_for_non_bad_heap_word_value(HeapWord* addr,
   }
 }
 #endif
-
+//依次尝试从内存堆的各内存代中分配内存空间  first_only=true: 只在年青代尝试分配   first_only=false: 先在年青代尝试分配，分配失败则再在旧生代中尝试分配
 HeapWord* GenCollectedHeap::attempt_allocation(size_t size,
                                                bool is_tlab,
                                                bool first_only) {
-  HeapWord* res;
-  for (int i = 0; i < _n_gens; i++) {
-    if (_gens[i]->should_allocate(size, is_tlab)) {
+  HeapWord* res; // first_only=false进入老年代
+  for (int i = 0; i < _n_gens; i++) { //0:新生代  1:老年代
+    if (_gens[i]->should_allocate(size, is_tlab)) { // 如果是大对象 新生代肯定是false
       res = _gens[i]->allocate(size, is_tlab);
       if (res != NULL) return res;
       else if (first_only) break;
@@ -330,7 +330,7 @@ HeapWord* GenCollectedHeap::attempt_allocation(size_t size,
   // Otherwise...
   return NULL;
 }
-
+// 关注  cms: ConcurrentMarkSweepPolicy.mem_allocate_work
 HeapWord* GenCollectedHeap::mem_allocate(size_t size,
                                          bool* gc_overhead_limit_was_exceeded) {
   return collector_policy()->mem_allocate_work(size,

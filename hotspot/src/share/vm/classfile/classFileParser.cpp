@@ -154,11 +154,11 @@ void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) { // 常量
           _cp->interface_method_at_put(index, class_index, name_and_type_index);
         }
         break;
-      case JVM_CONSTANT_String :
+      case JVM_CONSTANT_String :   // todo JVM_CONSTANT_String
         {
-          cfs->guarantee_more(3, CHECK);  // string_index, tag/access_flags
+          cfs->guarantee_more(3, CHECK);  // string_index, tag/access_flags  u1:tag  u2:Index
           u2 string_index = cfs->get_u2_fast();
-          _cp->string_index_at_put(index, string_index);
+          _cp->string_index_at_put(index, string_index);  // index: 在constantPool的索引位置   string_index:string值在constantPool位置 constantPool.hpp:319
         }
         break;
       case JVM_CONSTANT_MethodHandle :
@@ -252,15 +252,15 @@ void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) { // 常量
           _cp->name_and_type_at_put(index, name_index, signature_index);
         }
         break;
-      case JVM_CONSTANT_Utf8 :
-        {
+      case JVM_CONSTANT_Utf8 :  // CONSTANT_String_info 的string_index就是 CONSTANT_Utf8_info的index
+        { // u1: tag   u2:length   u1 bytes[length];   : bytes
           cfs->guarantee_more(2, CHECK);  // utf8_length  确保足够字节数
           u2  utf8_length = cfs->get_u2_fast(); //  Read u2 from stream
-          u1* utf8_buffer = cfs->get_u1_buffer(); // return _current;
+          u1* utf8_buffer = cfs->get_u1_buffer(); // return _current;  返回当前位置  u1 bytes[length];
           assert(utf8_buffer != NULL, "null utf8 buffer");
           // Got utf8 string, guarantee utf8_length+1 bytes, set stream position forward.
           cfs->guarantee_more(utf8_length+1, CHECK);  // utf8 string, tag/access_flags
-          cfs->skip_u1_fast(utf8_length);
+          cfs->skip_u1_fast(utf8_length);  // _current += length;
 
           // Before storing the symbol, make sure it's legal
           if (_need_verify) {
@@ -285,7 +285,7 @@ void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) { // 常量
             lengths[names_count] = utf8_length;  // 长度
             indices[names_count] = index;  // 索引
             hashValues[names_count++] = hash;  //hash     // 然后names_count++
-            if (names_count == SymbolTable::symbol_alloc_batch_size) {  // ==8
+            if (names_count == SymbolTable::symbol_alloc_batch_size) {  // ==8 如果达到了8个，则先初始化
               SymbolTable::new_symbols(_loader_data, _cp, names_count, names, lengths, indices, hashValues, CHECK);
               names_count = 0; //上面一行 new_symbols:symbolTable.hpp -> symbolTable.cpp:add -> symbolTable.cpp:add:345 ->basic_add
             }

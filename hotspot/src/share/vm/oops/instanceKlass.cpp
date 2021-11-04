@@ -1112,17 +1112,17 @@ instanceOop InstanceKlass::register_finalizer(instanceOop i, TRAPS) {
   JavaCalls::call(&result, mh, &args, CHECK_NULL);
   return h_i();
 }
-
-instanceOop InstanceKlass::allocate_instance(TRAPS) {
-  bool has_finalizer_flag = has_finalizer(); // Query before possible GC
-  int size = size_helper();  // Query before forming handle.
-
+// 这个方法返回的instanceOop是instanceOopDesc指针的别名（不开启预编译），instanceOopDesc是oopDesc的子类,表示java class的实例
+instanceOop InstanceKlass::allocate_instance(TRAPS) { //InstanceKlass是Klass的子类，表示类的元数据
+  bool has_finalizer_flag = has_finalizer(); // Query before possible GC  //判断是否定义finalizer方法
+  int size = size_helper();  // Query before forming handle.  //返回实例大小
+  // 封装成KlassHandle句柄，可以简单理解为是Klass的封装类
   KlassHandle h_k(THREAD, this);
 
   instanceOop i;
-
-  i = (instanceOop)CollectedHeap::obj_allocate(h_k, size, CHECK_NULL);
-  if (has_finalizer_flag && !RegisterFinalizersAtInit) {
+  // 创建对象实例
+  i = (instanceOop)CollectedHeap::obj_allocate(h_k, size, CHECK_NULL);  // 关注这里创建object  collectedHeap.inline.hpp:199
+  if (has_finalizer_flag && !RegisterFinalizersAtInit) { // 注册finalizer方法
     i = register_finalizer(i, CHECK_NULL);
   }
   return i;
