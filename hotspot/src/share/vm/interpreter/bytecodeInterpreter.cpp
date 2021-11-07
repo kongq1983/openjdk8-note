@@ -2157,13 +2157,13 @@ run:
 
           UPDATE_PC_AND_TOS_AND_CONTINUE(3, count);
         }
-
-      CASE(_new): {
+      // todo _new start ==============================
+      CASE(_new): { // todo new
         u2 index = Bytes::get_Java_u2(pc+1);
         ConstantPool* constants = istate->method()->constants();
         if (!constants->tag_at(index).is_unresolved_klass()) {
           // Make sure klass is initialized and doesn't have a finalizer
-          Klass* entry = constants->slot_at(index).get_klass();
+          Klass* entry = constants->slot_at(index).get_klass(); // 得到kclass
           assert(entry->is_klass(), "Should be resolved klass");
           Klass* k_entry = (Klass*) entry;
           assert(k_entry->oop_is_instance(), "Should be InstanceKlass");
@@ -2174,36 +2174,36 @@ run:
             // If the TLAB isn't pre-zeroed then we'll have to do it
             bool need_zero = !ZeroTLAB;
             if (UseTLAB) {
-              result = (oop) THREAD->tlab().allocate(obj_size);
+              result = (oop) THREAD->tlab().allocate(obj_size);//tlab中创建对象
             }
             // Disable non-TLAB-based fast-path, because profiling requires that all
             // allocations go through InterpreterRuntime::_new() if THREAD->tlab().allocate
             // returns NULL.
 #ifndef CC_INTERP_PROFILE
-            if (result == NULL) {
+            if (result == NULL) { // 不使用TLAB或在TLAB上分配失败，则会尝试在堆的Eden区上进行分配
               need_zero = true;
               // Try allocate in shared eden
             retry:
-              HeapWord* compare_to = *Universe::heap()->top_addr();
-              HeapWord* new_top = compare_to + obj_size;
+              HeapWord* compare_to = *Universe::heap()->top_addr(); // 这里compare_to是Eden区空闲块的起始地址
+              HeapWord* new_top = compare_to + obj_size; // new_top为使用该块空闲块进行分配后(新的空闲块起始地址)
               if (new_top <= *Universe::heap()->end_addr()) {
                 if (Atomic::cmpxchg_ptr(new_top, Universe::heap()->top_addr(), compare_to) != compare_to) {
-                  goto retry;
+                  goto retry; //针碰撞技术
                 }
                 result = (oop) compare_to;
               }
             }
 #endif
-            if (result != NULL) {
+            if (result != NULL) {  // 对象创建完成
               // Initialize object (if nonzero size and need) and then the header
-              if (need_zero ) {
+              if (need_zero ) { // 根据是否需要填0选项，对分配空间的对象数据区进行填0
                 HeapWord* to_zero = (HeapWord*) result + sizeof(oopDesc) / oopSize;
                 obj_size -= sizeof(oopDesc) / oopSize;
                 if (obj_size > 0 ) {
                   memset(to_zero, 0, obj_size * HeapWordSize);
                 }
               }
-              if (UseBiasedLocking) {
+              if (UseBiasedLocking) { //使用偏向锁
                 result->set_mark(ik->prototype_header());
               } else {
                 result->set_mark(markOopDesc::prototype());
@@ -2218,16 +2218,16 @@ run:
             }
           }
         }
-        // Slow case allocation
+        // Slow case allocation  若该类型没有被解析，就会调用InterpreterRuntime的_new函数完成慢速分配
         CALL_VM(InterpreterRuntime::_new(THREAD, METHOD->constants(), index),
                 handle_exception);
         // Must prevent reordering of stores for object initialization
         // with stores that publish the new object.
         OrderAccess::storestore();
-        SET_STACK_OBJECT(THREAD->vm_result(), 0);
+        SET_STACK_OBJECT(THREAD->vm_result(), 0); // 把对象地址引入栈，并继续执行下一个字节码
         THREAD->set_vm_result(NULL);
         UPDATE_PC_AND_TOS_AND_CONTINUE(3, 1);
-      }
+      } // todo _new end ========================
       CASE(_anewarray): {
         u2 index = Bytes::get_Java_u2(pc+1);
         jint size = STACK_INT(-1);
@@ -2345,7 +2345,7 @@ run:
             SET_STACK_FLOAT(constants->float_at(index), 0);
             break;
 
-          case JVM_CONSTANT_String: // todo string
+          case JVM_CONSTANT_String: // todo ldc  string
             {
               oop result = constants->resolved_references()->obj_at(index); // 从常量池取
               if (result == NULL) {

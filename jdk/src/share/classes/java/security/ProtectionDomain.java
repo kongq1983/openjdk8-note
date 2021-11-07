@@ -466,6 +466,11 @@ public class ProtectionDomain {
                         }
                     };
                 }
+
+                @Override
+                public boolean getStaticPermissionsField(ProtectionDomain protectionDomain) {
+                    return false;
+                }
             });
     }
 }
