@@ -727,7 +727,7 @@ oop StringTable::lookup(jchar* name, int len) {
   return string;
 }
 
-// todo String.intern()
+// todo String.intern()  handle -> oop -> kclass
 oop StringTable::intern(Handle string_or_null, jchar* name,
                         int len, TRAPS) {
   unsigned int hashValue = hash_string(name, len); // 计算出字符串的哈希值

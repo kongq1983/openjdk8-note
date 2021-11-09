@@ -62,8 +62,8 @@ static JNINativeMethod methods[] = {
     {"isPrimitive",      "()Z",             (void *)&JVM_IsPrimitiveClass},
     {"getComponentType", "()" CLS,          (void *)&JVM_GetComponentType},
     {"getModifiers",     "()I",             (void *)&JVM_GetClassModifiers},
-    {"getDeclaredFields0","(Z)[" FLD,       (void *)&JVM_GetClassDeclaredFields},
-    {"getDeclaredMethods0","(Z)[" MHD,      (void *)&JVM_GetClassDeclaredMethods},
+    {"getDeclaredFields0","(Z)[" FLD,       (void *)&JVM_GetClassDeclaredFields}, // 反射getDeclaredFields0
+    {"getDeclaredMethods0","(Z)[" MHD,      (void *)&JVM_GetClassDeclaredMethods}, // 反射JVM_GetClassDeclaredMethods
     {"getDeclaredConstructors0","(Z)[" CTR, (void *)&JVM_GetClassDeclaredConstructors},
     {"getProtectionDomain0", "()" PD,       (void *)&JVM_GetProtectionDomain},
     {"getDeclaredClasses0",  "()[" CLS,      (void *)&JVM_GetDeclaredClasses},

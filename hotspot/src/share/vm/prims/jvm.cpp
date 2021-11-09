@@ -1904,7 +1904,7 @@ JVM_ENTRY(jobjectArray, JVM_GetMethodParameters(JNIEnv *env, jobject method))
 JVM_END
 
 // New (JDK 1.4) reflection implementation /////////////////////////////////////
-
+// todo 反射 getDeclaredFields0
 JVM_ENTRY(jobjectArray, JVM_GetClassDeclaredFields(JNIEnv *env, jclass ofClass, jboolean publicOnly))
 {
   JVMWrapper("JVM_GetClassDeclaredFields");
@@ -1978,7 +1978,7 @@ static bool select_method(methodHandle method, bool want_constructor) {
 
 static jobjectArray get_class_declared_methods_helper(
                                   JNIEnv *env,
-                                  jclass ofClass, jboolean publicOnly,
+                                  jclass ofClass, jboolean publicOnly, // ofClass = Method.class
                                   bool want_constructor,
                                   Klass* klass, TRAPS) {
 
@@ -1995,10 +1995,10 @@ static jobjectArray get_class_declared_methods_helper(
   instanceKlassHandle k(THREAD, java_lang_Class::as_Klass(JNIHandles::resolve_non_null(ofClass)));
 
   // Ensure class is linked
-  k->link_class(CHECK_NULL);
+  k->link_class(CHECK_NULL); // 确保class是链接的
 
   Array<Method*>* methods = k->methods();
-  int methods_length = methods->length();
+  int methods_length = methods->length(); // 如果5个方法，则methods_length=6
 
   // Save original method_idnum in case of redefinition, which can change
   // the idnum of obsolete methods.  The new method will have the same idnum
@@ -2007,10 +2007,10 @@ static jobjectArray get_class_declared_methods_helper(
   GrowableArray<int>* idnums = new GrowableArray<int>(methods_length);
   int num_methods = 0;
 
-  for (int i = 0; i < methods_length; i++) {
+  for (int i = 0; i < methods_length; i++) { // 遍历方法  如果5个方法，则methods_length=6，因为这里是小于
     methodHandle method(THREAD, methods->at(i));
     if (select_method(method, want_constructor)) {
-      if (!publicOnly || method->is_public()) {
+      if (!publicOnly || method->is_public()) { // publicOnly=false 全部方法   publicOnly=true只要公共方法
         idnums->push(method->method_idnum());
         ++num_methods;
       }
