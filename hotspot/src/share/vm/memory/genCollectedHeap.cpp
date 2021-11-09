@@ -800,7 +800,7 @@ void GenCollectedHeap::collect_mostly_concurrent(GCCause::Cause cause) {
 #endif // INCLUDE_ALL_GCS
 
 void GenCollectedHeap::do_full_collection(bool clear_all_soft_refs) {
-   do_full_collection(clear_all_soft_refs, _n_gens - 1);
+   do_full_collection(clear_all_soft_refs, _n_gens - 1); // 相当于只清理新生代
 }
 
 void GenCollectedHeap::do_full_collection(bool clear_all_soft_refs,
@@ -835,9 +835,9 @@ void GenCollectedHeap::do_full_collection(bool clear_all_soft_refs,
                   n_gens() - 1         /* max_level */);
   }
 }
-
+/** todo 是否在新生代 */
 bool GenCollectedHeap::is_in_young(oop p) {
-  bool result = ((HeapWord*)p) < _gens[_n_gens - 1]->reserved().start();
+  bool result = ((HeapWord*)p) < _gens[_n_gens - 1]->reserved().start(); // 是否在新生代中
   assert(result == _gens[0]->is_in_reserved(p),
          err_msg("incorrect test - result=%d, p=" PTR_FORMAT, result, p2i((void*)p)));
   return result;

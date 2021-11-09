@@ -320,16 +320,16 @@ void DefNewGeneration::compute_space_boundaries(uintx minimum_eden_size,
   // failure handling when to-space can contain live objects.
   from()->set_next_compaction_space(NULL);
 }
-
+// todo 分配内存　　form 和　to 交换
 void DefNewGeneration::swap_spaces() {
   ContiguousSpace* s = from();
-  _from_space        = to();
+  _from_space        = to(); // 交换了　form 和 to的起始地址
   _to_space          = s;
-  eden()->set_next_compaction_space(from());
+  eden()->set_next_compaction_space(from()); // 设置eden下一片需要压缩的区域为现在的from区
   // The to-space is normally empty before a compaction so need
   // not be considered.  The exception is during promotion
   // failure handling when to-space can contain live objects.
-  from()->set_next_compaction_space(NULL);
+  from()->set_next_compaction_space(NULL); // 新的from区下一片需要压缩的区域为NULL
 
   if (UsePerfData) {
     CSpaceCounters* c = _from_counters;
@@ -511,8 +511,8 @@ void DefNewGeneration::space_iterate(SpaceClosure* blk,
 }
 
 // The last collection bailed out, we are running out of heap space,
-// so we try to allocate the from-space, too.
-HeapWord* DefNewGeneration::allocate_from_space(size_t size) {
+// so we try to allocate the from-space, too.  尝试从from区分配内存  todo 分配内存 allocate_from_space
+HeapWord* DefNewGeneration::allocate_from_space(size_t size) { // 1. Eden区分配不够，会从From区分配　　2. 正在进行GC，可能会从From区分配内存
   HeapWord* result = NULL;
   if (Verbose && PrintGCDetails) {
     gclog_or_tty->print("DefNewGeneration::allocate_from_space(%u):"
@@ -524,10 +524,10 @@ HeapWord* DefNewGeneration::allocate_from_space(size_t size) {
                           "true" : "false",
                         Heap_lock->is_locked() ? "locked" : "unlocked",
                         from()->free());
-  }
-  if (should_allocate_from_space() || GC_locker::is_active_and_needs_gc()) {
-    if (Heap_lock->owned_by_self() ||
-        (SafepointSynchronize::is_at_safepoint() &&
+  } // should_allocate_from_space() 根据　_should_allocate_from_space变量来判断
+  if (should_allocate_from_space() || GC_locker::is_active_and_needs_gc()) { // 1. Eden区分配不够，会从From区分配　　2. 正在进行GC，可能会从From区分配内存
+    if (Heap_lock->owned_by_self() || // 当前线程持有堆的全局锁
+        (SafepointSynchronize::is_at_safepoint() && // 执行GC的VMThread线程借助From区完成一些安全点下的操作
          Thread::current()->is_VM_thread())) {
       // If the Heap_lock is not locked by this thread, this will be called
       // again later with the Heap_lock held.
@@ -543,7 +543,7 @@ HeapWord* DefNewGeneration::allocate_from_space(size_t size) {
   }
   return result;
 }
-
+// todo 扩容　　分配内存
 HeapWord* DefNewGeneration::expand_and_allocate(size_t size,
                                                 bool   is_tlab,
                                                 bool   parallel) {
@@ -1022,7 +1022,7 @@ const char* DefNewGeneration::name() const {
 CompactibleSpace* DefNewGeneration::first_compaction_space() const {
   return eden();
 }
-
+// todo allocate 分配内存　
 HeapWord* DefNewGeneration::allocate(size_t word_size,
                                      bool is_tlab) {
   // This is the slow-path allocation for the DefNewGeneration.
@@ -1030,18 +1030,18 @@ HeapWord* DefNewGeneration::allocate(size_t word_size,
   // We try to allocate from the eden.  If that works, we are happy.
   // Note that since DefNewGeneration supports lock-free allocation, we
   // have to use it here, as well.
-  HeapWord* result = eden()->par_allocate(word_size);
+  HeapWord* result = eden()->par_allocate(word_size); // 以并行的方式快速从Eden空间分配内存
   if (result != NULL) {
     if (CMSEdenChunksRecordAlways && _next_gen != NULL) {
       _next_gen->sample_eden_chunk();
     }
     return result;
   }
-  do {
+  do { // 扩展Eden空间内存空间的方式分配内存
     HeapWord* old_limit = eden()->soft_end();
     if (old_limit < eden()->end()) {
       // Tell the next generation we reached a limit.
-      HeapWord* new_limit =
+      HeapWord* new_limit = // 通知下一个内存代管理器，Eden区的使用达到了逻辑限制    由下一个内存代管理器来决定Eden区新的限制位置
         next_gen()->allocation_limit_reached(eden(), eden()->top(), word_size);
       if (new_limit != NULL) {
         Atomic::cmpxchg_ptr(new_limit, eden()->soft_end_addr(), old_limit);
@@ -1056,7 +1056,7 @@ HeapWord* DefNewGeneration::allocate(size_t word_size,
       break;
     }
     // Try to allocate until succeeded or the soft limit can't be adjusted
-    result = eden()->par_allocate(word_size);
+    result = eden()->par_allocate(word_size); // 重试，直到内存分配成功或者软引用限制不能再调整
   } while (result == NULL);
 
   // If the eden is full and the last collection bailed out, we are running
@@ -1064,13 +1064,13 @@ HeapWord* DefNewGeneration::allocate(size_t word_size,
   // allocate_from_space can't be inlined because that would introduce a
   // circular dependency at compile time.
   if (result == NULL) {
-    result = allocate_from_space(word_size);
+    result = allocate_from_space(word_size); // 从From空间分配内存  Eden没有足够的内存，则从From区分配
   } else if (CMSEdenChunksRecordAlways && _next_gen != NULL) {
     _next_gen->sample_eden_chunk();
   }
   return result;
 }
-// todo 分配内存
+// todo par_allocate 分配内存
 HeapWord* DefNewGeneration::par_allocate(size_t word_size,
                                          bool is_tlab) {
   HeapWord* res = eden()->par_allocate(word_size);

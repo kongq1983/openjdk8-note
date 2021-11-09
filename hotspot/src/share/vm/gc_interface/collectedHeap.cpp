@@ -327,7 +327,7 @@ void CollectedHeap::flush_deferred_store_barrier(JavaThread* thread) {
   }
   assert(thread->deferred_card_mark().is_empty(), "invariant");
 }
-
+// todo tlab max_tlab_size
 size_t CollectedHeap::max_tlab_size() const {
   // TLABs can't be bigger than we can fill with a int[Integer.MAX_VALUE].
   // This restriction could be removed by enabling filling with multiple arrays.

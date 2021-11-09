@@ -650,7 +650,7 @@ HeapWord* GenCollectorPolicy::mem_allocate_work(size_t size,
   // In general gc_overhead_limit_was_exceeded should be false so
   // set it so here and reset it to true only if the gc time
   // limit is being exceeded as checked below.
-  *gc_overhead_limit_was_exceeded = false;
+  *gc_overhead_limit_was_exceeded = false; // gc是否超时
 
   HeapWord* result = NULL;
 
@@ -663,7 +663,7 @@ HeapWord* GenCollectorPolicy::mem_allocate_work(size_t size,
     Generation *gen0 = gch->get_gen(0);
     assert(gen0->supports_inline_contig_alloc(),
       "Otherwise, must do alloc within heap lock");  // 这一步只会分配小对象
-    if (gen0->should_allocate(size, is_tlab)) { // DefNewGeneration::should_allocate:262  空间未满  && 字节数>0  && ( is_tlab=true || PretenureSizeThreshold非0 || 小对象)
+    if (gen0->should_allocate(size, is_tlab)) { // 新生代是否允许分配　DefNewGeneration::should_allocate:262  空间未满  && 字节数>0  && ( is_tlab=true || PretenureSizeThreshold非0 || 小对象)
       result = gen0->par_allocate(size, is_tlab); // DefNewGeneration::par_allocate;1074   eden()->par_allocate是关键，最后将由par_allocate_impl来实现
       if (result != NULL) { // 首先判断是否可以在Young区分配空间，如果可以，那么就在Young区域分配，如果分配成功了，那么就可以结束这次内存分配之旅了
         assert(gch->is_in_reserved(result), "result not in heap");
@@ -769,7 +769,7 @@ HeapWord* GenCollectorPolicy::mem_allocate_work(size_t size,
     }
   }// -------------end
 }
-
+// todo expand_heap_and_allocate 内存分配
 HeapWord* GenCollectorPolicy::expand_heap_and_allocate(size_t size,
                                                        bool   is_tlab) {
   GenCollectedHeap *gch = GenCollectedHeap::heap();
@@ -783,7 +783,7 @@ HeapWord* GenCollectorPolicy::expand_heap_and_allocate(size_t size,
   assert(result == NULL || gch->is_in_reserved(result), "result not in heap");
   return result;
 }
-
+// todo 分配失败   VM_GenCollectForAllocation::doit() 调用
 HeapWord* GenCollectorPolicy::satisfy_failed_allocation(size_t size,
                                                         bool   is_tlab) {
   GenCollectedHeap *gch = GenCollectedHeap::heap();
@@ -791,11 +791,11 @@ HeapWord* GenCollectorPolicy::satisfy_failed_allocation(size_t size,
   HeapWord* result = NULL;
 
   assert(size != 0, "Precondition violated");
-  if (GC_locker::is_active_and_needs_gc()) {
+  if (GC_locker::is_active_and_needs_gc()) { // 表示有jni在操作内存，此时不能进行GC避免改变对象在内存的位置
     // GC locker is active; instead of a collection we will attempt
     // to expand the heap, if there's room for expansion.
-    if (!gch->is_maximal_no_gc()) {
-      result = expand_heap_and_allocate(size, is_tlab);
+    if (!gch->is_maximal_no_gc()) { // 尽量不gc
+      result = expand_heap_and_allocate(size, is_tlab); // 扩堆
     }
     return result;   // could be null if we are out of space
   } else if (!gch->incremental_collection_will_fail(false /* don't consult_young */)) {
@@ -809,25 +809,25 @@ HeapWord* GenCollectorPolicy::satisfy_failed_allocation(size_t size,
     if (Verbose && PrintGCDetails) {
       gclog_or_tty->print(" :: Trying full because partial may fail :: ");
     }
-    // Try a full collection; see delta for bug id 6266275
+    // Try a full collection; see delta for bug id 6266275   做一次full gc
     // for the original code and why this has been simplified
     // with from-space allocation criteria modified and
     // such allocation moved out of the safepoint path.
-    gch->do_collection(true             /* full */,
+    gch->do_collection(true             /* full */,  // 做一次full gc
                        false            /* clear_all_soft_refs */,
                        size             /* size */,
                        is_tlab          /* is_tlab */,
                        number_of_generations() - 1 /* max_level */);
   }
 
-  result = gch->attempt_allocation(size, is_tlab, false /*first_only*/);
+  result = gch->attempt_allocation(size, is_tlab, false /*first_only*/);  //  GC完再尝试分配
 
   if (result != NULL) {
     assert(gch->is_in_reserved(result), "result not in heap");
     return result;
   }
 
-  // OK, collection failed, try expansion.
+  // OK, collection failed, try expansion.  如果GC完还分配失败，看看能否进行扩容和分配
   result = expand_heap_and_allocate(size, is_tlab);
   if (result != NULL) {
     return result;
@@ -847,7 +847,7 @@ HeapWord* GenCollectorPolicy::satisfy_failed_allocation(size_t size,
                        is_tlab          /* is_tlab */,
                        number_of_generations() - 1 /* max_level */);
   }
-
+  // 要是再分配不了，只能报OOM了。。。
   result = gch->attempt_allocation(size, is_tlab, false /* first_only */);
   if (result != NULL) {
     assert(gch->is_in_reserved(result), "result not in heap");
@@ -863,7 +863,7 @@ HeapWord* GenCollectorPolicy::satisfy_failed_allocation(size_t size,
   // appropriate.
   return NULL;
 }
-
+////////////////
 MetaWord* CollectorPolicy::satisfy_failed_metadata_allocation(
                                                  ClassLoaderData* loader_data,
                                                  size_t word_size,
