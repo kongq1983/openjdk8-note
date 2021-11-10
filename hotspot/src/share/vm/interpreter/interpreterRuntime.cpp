@@ -598,7 +598,7 @@ IRT_END
 // be shared by method invocation and synchronized blocks.
 //%note synchronization_3
 
-//%note monitor_1
+//%note monitor_1 todo synchronized monitorenter
 IRT_ENTRY_NO_ASYNC(void, InterpreterRuntime::monitorenter(JavaThread* thread, BasicObjectLock* elem))
 #ifdef ASSERT
   thread->last_frame().interpreter_frame_verify_monitor(elem);
@@ -611,9 +611,9 @@ IRT_ENTRY_NO_ASYNC(void, InterpreterRuntime::monitorenter(JavaThread* thread, Ba
          "must be NULL or an object");
   if (UseBiasedLocking) { // 开启偏向锁
     // Retry fast entry if bias is revoked to avoid unnecessary inflation
-    ObjectSynchronizer::fast_enter(h_obj, elem->lock(), true, CHECK);
+    ObjectSynchronizer::fast_enter(h_obj, elem->lock(), true, CHECK); // synchronizer.cpp:168
   } else {
-    ObjectSynchronizer::slow_enter(h_obj, elem->lock(), CHECK); // 绕过偏向锁，直接进入轻量级锁。
+    ObjectSynchronizer::slow_enter(h_obj, elem->lock(), CHECK); // 绕过偏向锁，直接进入轻量级锁。 synchronizer.cpp:226
   }
   assert(Universe::heap()->is_in_reserved_or_null(elem->obj()),
          "must be NULL or an object");
@@ -623,7 +623,7 @@ IRT_ENTRY_NO_ASYNC(void, InterpreterRuntime::monitorenter(JavaThread* thread, Ba
 IRT_END
 
 
-//%note monitor_1
+//%note monitor_1  todo synchronized monitorexit
 IRT_ENTRY_NO_ASYNC(void, InterpreterRuntime::monitorexit(JavaThread* thread, BasicObjectLock* elem))
 #ifdef ASSERT
   thread->last_frame().interpreter_frame_verify_monitor(elem);

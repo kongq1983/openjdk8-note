@@ -159,8 +159,8 @@ public:
   static int* slow_path_entry_count_addr();
 
   enum Condition {
-    NOT_BIASED = 1,
-    BIAS_REVOKED = 2,
+    NOT_BIASED = 1, // 无偏向
+    BIAS_REVOKED = 2, // 撤销偏向
     BIAS_REVOKED_AND_REBIASED = 3
   };
 

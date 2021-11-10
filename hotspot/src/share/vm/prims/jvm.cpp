@@ -1979,7 +1979,7 @@ static bool select_method(methodHandle method, bool want_constructor) {
 static jobjectArray get_class_declared_methods_helper(
                                   JNIEnv *env,
                                   jclass ofClass, jboolean publicOnly, // ofClass = Method.class
-                                  bool want_constructor,
+                                  bool want_constructor, // want_constructor=是否构造方法
                                   Klass* klass, TRAPS) {
 
   JvmtiVMObjectAllocEventCollector oam;
@@ -2009,7 +2009,7 @@ static jobjectArray get_class_declared_methods_helper(
 
   for (int i = 0; i < methods_length; i++) { // 遍历方法  如果5个方法，则methods_length=6，因为这里是小于
     methodHandle method(THREAD, methods->at(i));
-    if (select_method(method, want_constructor)) {
+    if (select_method(method, want_constructor)) { //  want_constructor是否构造方法  true:构造方法  false:不是构造方法
       if (!publicOnly || method->is_public()) { // publicOnly=false 全部方法   publicOnly=true只要公共方法
         idnums->push(method->method_idnum());
         ++num_methods;
@@ -2033,7 +2033,7 @@ static jobjectArray get_class_declared_methods_helper(
       result->obj_at_put(i, NULL);
     } else {
       oop m;
-      if (want_constructor) {
+      if (want_constructor) { // 构造方法
         m = Reflection::new_constructor(method, CHECK_NULL);
       } else {
         m = Reflection::new_method(method, UseNewReflection, false, CHECK_NULL);

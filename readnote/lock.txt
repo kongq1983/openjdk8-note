@@ -1,0 +1,20 @@
+因此偏向锁引入了批量重偏向与批量撤销。
+当某个类的对象锁撤销次数达到一定阈值，比如达到了20次，那么就会触发批量重偏向的逻辑，修改Klass里的epoch值，
+并修改当前正在使用该类型锁Mark Word里的epoch值。当线程想要获取偏向锁时，对比当前对象的epoch值与Klass里的epoch值，发现不相等，则认为过期。
+此时该线程被允许直接CAS修改Mark Word偏向当前线程，就不用再走撤销逻辑了。这部分对应最初分析偏向锁入口的标记(7)。
+
+同样的当撤销次数达到40次时，认为该对象已经不适合应用偏向锁了，因此会修改Klass里的偏向锁标记，更改为不支持偏向锁。
+当线程想要获取偏向锁时，检查Klass里的偏向锁标记值，若是不允许偏向，说明之前发生了批量撤销，因此该线程被允许直接CAS修改Mark Word为无锁状态，
+就不用再走撤销逻辑了。这部分对应最初分析偏向锁入口的标记(6)
+
+ product(intx, BiasedLockingBulkRebiasThreshold, 20,                       \
+          "Threshold of number of revocations per type to try to "          \
+          "rebias all objects in the heap of that type")                    \
+                                                                            \
+  product(intx, BiasedLockingBulkRevokeThreshold, 40,                       \
+          "Threshold of number of revocations per type to permanently "     \
+          "revoke biases of all objects in the heap of that type")
+
+  product(intx, BiasedLockingDecayTime, 25000,                              \
+            "Decay time (in milliseconds) to re-enable bulk rebiasing of a "  \
+            "type after previous bulk rebias")

@@ -155,11 +155,11 @@ class markOopDesc: public oopDesc {
                             (address_word)hash_mask << hash_shift;
 #endif
 
-  enum { locked_value             = 0,
-         unlocked_value           = 1,
-         monitor_value            = 2,
-         marked_value             = 3,
-         biased_lock_pattern      = 5
+  enum { locked_value             = 0, // 0000 轻量级锁
+         unlocked_value           = 1, // 0001 无锁
+         monitor_value            = 2, // 0010 重量级锁
+         marked_value             = 3, // 0011 GC标记
+         biased_lock_pattern      = 5 // 偏向锁 0101
   };
 
   enum { no_hash                  = 0 };  // no hash value assigned
@@ -172,13 +172,13 @@ class markOopDesc: public oopDesc {
 
   enum { max_bias_epoch           = epoch_mask };
 
-  // Biased Locking accessors.
+  // Biased Locking accessors. 有偏向(biased_lock_pattern=0101=5 偏向锁)
   // These must be checked by all code which calls into the
   // ObjectSynchronizer and other code. The biasing is not understood
   // by the lower-level CAS-based locking code, although the runtime
   // fixes up biased locks to be compatible with it when a bias is
   // revoked.
-  bool has_bias_pattern() const {
+  bool has_bias_pattern() const { // biased_lock_pattern=101=5 偏向锁
     return (mask_bits(value(), biased_lock_mask_in_place) == biased_lock_pattern);
   }
   JavaThread* biased_locker() const {
@@ -186,9 +186,9 @@ class markOopDesc: public oopDesc {
     return (JavaThread*) ((intptr_t) (mask_bits(value(), ~(biased_lock_mask_in_place | age_mask_in_place | epoch_mask_in_place))));
   }
   // Indicates that the mark has the bias bit set but that it has not
-  // yet been biased toward a particular thread
+  // yet been biased toward a particular thread 表示标记设置了偏置位，但没有设置仍然偏向于特定线程
   bool is_biased_anonymously() const {
-    return (has_bias_pattern() && (biased_locker() == NULL));
+    return (has_bias_pattern() && (biased_locker() == NULL)); // 有偏向锁  但没有设置特定线程
   }
   // Indicates epoch in which this bias was acquired. If the epoch
   // changes due to too many bias revocations occurring, the biases
@@ -205,9 +205,9 @@ class markOopDesc: public oopDesc {
   markOop incr_bias_epoch() {
     return set_bias_epoch((1 + bias_epoch()) & epoch_mask);
   }
-  // Prototype mark for initialization
+  // Prototype mark for initialization 初始化 0101=5 偏向锁
   static markOop biased_locking_prototype() {
-    return markOop( biased_lock_pattern );
+    return markOop( biased_lock_pattern ); // 初始化 0101=5 偏向锁
   }
 
   // lock accessors (note that these assume lock_shift == 0)
@@ -274,11 +274,11 @@ class markOopDesc: public oopDesc {
   bool has_locker() const { // 轻量级锁
     return ((value() & lock_mask_in_place) == locked_value); // locked_value=0
   }
-  BasicLock* locker() const {
+  BasicLock* locker() const { // 偏向锁
     assert(has_locker(), "check");
     return (BasicLock*) value();
   }
-  bool has_monitor() const {
+  bool has_monitor() const { // 重量级锁
     return ((value() & monitor_value) != 0); // monitor_value =2
   }
   ObjectMonitor* monitor() const {
@@ -350,7 +350,7 @@ class markOopDesc: public oopDesc {
   }
 
   // Prototype mark for initialization
-  static markOop prototype() {
+  static markOop prototype() { // markOopDesc::prototype()
     return markOop( no_hash_in_place | no_lock_in_place );
   }
 

@@ -168,8 +168,8 @@ static volatile int MonitorPopulation = 0 ;      // # Extant -- in circulation
 void ObjectSynchronizer::fast_enter(Handle obj, BasicLock* lock, bool attempt_rebias, TRAPS) {
  if (UseBiasedLocking) { // 判断是否开启了偏向锁
     if (!SafepointSynchronize::is_at_safepoint()) { // //如果不处于全局安全点
-      BiasedLocking::Condition cond = BiasedLocking::revoke_and_rebias(obj, attempt_rebias, THREAD);
-      if (cond == BiasedLocking::BIAS_REVOKED_AND_REBIASED) {
+      BiasedLocking::Condition cond = BiasedLocking::revoke_and_rebias(obj, attempt_rebias, THREAD); //通过revoke_and_rebias这个函数尝试获取偏向锁
+      if (cond == BiasedLocking::BIAS_REVOKED_AND_REBIASED) { //如果是撤销与重偏向直接返回
         return;
       }
     } else { //如果在安全点，撤销偏向锁
@@ -179,7 +179,7 @@ void ObjectSynchronizer::fast_enter(Handle obj, BasicLock* lock, bool attempt_re
     assert(!obj->mark()->has_bias_pattern(), "biases should be revoked by now");
  }
 
- slow_enter (obj, lock, THREAD) ;  // 进入轻量级锁
+ slow_enter (obj, lock, THREAD) ;  // 进入轻量级锁 226
 }
 
 void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
@@ -219,7 +219,7 @@ void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
 }
 
 // -----------------------------------------------------------------------------
-// Interpreter/Compiler Slow Case
+// Interpreter/Compiler Slow Case todo ObjectSynchronizer::slow_enter
 // This routine is used to handle interpreter/compiler slow case
 // We don't need to use fast path here, because it must have been
 // failed in the interpreter/compiler code.
@@ -232,11 +232,11 @@ void ObjectSynchronizer::slow_enter(Handle obj, BasicLock* lock, TRAPS) {
     // be visible <= the ST performed by the CAS.
     lock->set_displaced_header(mark); //设置Displaced Mark Word并替换对象头的mark word
     if (mark == (markOop) Atomic::cmpxchg_ptr(lock, obj()->mark_addr(), mark)) {
-      TEVENT (slow_enter: release stacklock) ;
+      TEVENT (slow_enter: release stacklock) ; // 通过CAS将mark word更新为指向BasicLock对象的指针，更新成功表示获得了轻量级锁
       return ;
     }
     // Fall through to inflate() ...
-  } else
+  } else // 如果markword处于加锁状态、且markword中的ptr指针指向当前线程的栈帧，表示为重入操作，不需要争抢锁
   if (mark->has_locker() && THREAD->is_lock_owned((address)mark->locker())) {  // 轻量级锁
     assert(lock != mark->locker(), "must not re-lock the same lock");
     assert(lock != (BasicLock*)obj->mark(), "don't relock with same BasicLock");
@@ -1190,7 +1190,7 @@ ObjectMonitor* ObjectSynchronizer::inflate_helper(oop obj) {
 // Note that we could encounter some performance loss through false-sharing as
 // multiple locks occupy the same $ line.  Padding might be appropriate.
 
-// ObjectMonitor
+// ObjectMonitor  todo ObjectSynchronizer::inflate 升级重量级锁
 ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
   // Inflate mutates the heap ...
   // Relaxing assertion for bug 6320749.
