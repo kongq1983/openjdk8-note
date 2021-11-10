@@ -51,7 +51,7 @@ SymbolTable* SymbolTable::_the_table = NULL;
 // Static arena for symbols that are not deallocated
 Arena* SymbolTable::_arena = NULL;
 bool SymbolTable::_needs_rehashing = false;
-
+//todo  内存分配　关注这里
 Symbol* SymbolTable::allocate_symbol(const u1* name, int len, bool c_heap, TRAPS) {
   assert (len <= Symbol::max_length(), "should be checked by caller");
 
@@ -196,7 +196,7 @@ Symbol* SymbolTable::lookup(int index, const char* name,
   for (HashtableEntry<Symbol*, mtSymbol>* e = bucket(index); e != NULL; e = e->next()) {
     count++;  // count all entries in this bucket, not just ones with same hash
     if (e->hash() == hash) { // 先根据hash
-      Symbol* sym = e->literal();
+      Symbol* sym = e->literal(); // symbol.cpp:73
       if (sym->equals(name, len)) { //判断值是否相等
         // something is referencing this symbol now.
         sym->increment_refcount(); // 引用数+1
@@ -280,13 +280,13 @@ Symbol* SymbolTable::lookup(const Symbol* sym, int begin, int end, TRAPS) {
 
   return the_table()->basic_add(index, (u1*)buffer, len, hashValue, true, CHECK_NULL);
 }
-
+// todo SymbolTable::lookup_only
 Symbol* SymbolTable::lookup_only(const char* name, int len,
                                    unsigned int& hash) {
   hash = hash_symbol(name, len);
   int index = the_table()->hash_to_index(hash);
 
-  Symbol* s = the_table()->lookup(index, name, len, hash);
+  Symbol* s = the_table()->lookup(index, name, len, hash); // 本文件:193
   return s;
 }
 

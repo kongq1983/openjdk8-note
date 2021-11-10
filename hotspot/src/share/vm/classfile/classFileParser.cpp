@@ -286,7 +286,7 @@ void ClassFileParser::parse_constant_pool_entries(int length, TRAPS) { // 常量
             indices[names_count] = index;  // 索引
             hashValues[names_count++] = hash;  //hash     // 然后names_count++
             if (names_count == SymbolTable::symbol_alloc_batch_size) {  // ==8 如果达到了8个，则先初始化
-              SymbolTable::new_symbols(_loader_data, _cp, names_count, names, lengths, indices, hashValues, CHECK);
+              SymbolTable::new_symbols(_loader_data, _cp, names_count, names, lengths, indices, hashValues, CHECK); // symbolTable.hpp;102
               names_count = 0; //上面一行 new_symbols:symbolTable.hpp -> symbolTable.cpp:add -> symbolTable.cpp:add:345 ->basic_add
             }
           } else {

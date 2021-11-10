@@ -74,7 +74,7 @@ bool Symbol::equals(const char* str, int len) const {
   int l = utf8_length();
   if (l != len) return false;
   while (l-- > 0) {
-    if (str[l] != (char) byte_at(l))
+    if (str[l] != (char) byte_at(l)) // 1个cahr1个char比较
       return false;
   }
   assert(l == -1, "we should be at the beginning");
