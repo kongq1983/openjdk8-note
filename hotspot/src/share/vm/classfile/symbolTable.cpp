@@ -51,7 +51,7 @@ SymbolTable* SymbolTable::_the_table = NULL;
 // Static arena for symbols that are not deallocated
 Arena* SymbolTable::_arena = NULL;
 bool SymbolTable::_needs_rehashing = false;
-//todo  内存分配　关注这里
+//todo allocate_symbol  内存分配　关注这里
 Symbol* SymbolTable::allocate_symbol(const u1* name, int len, bool c_heap, TRAPS) {
   assert (len <= Symbol::max_length(), "should be checked by caller");
 
@@ -60,11 +60,11 @@ Symbol* SymbolTable::allocate_symbol(const u1* name, int len, bool c_heap, TRAPS
   if (DumpSharedSpaces) { // metaspace?  MetaspaceObj
     // Allocate all symbols to CLD shared metaspace
     sym = new (len, ClassLoaderData::the_null_class_loader_data(), THREAD) Symbol(name, len, -1);
-  } else if (c_heap) { // heap
+  } else if (c_heap) { // heap  运行的时候　有类加载器　所以true
     // refcount starts as 1
     sym = new (len, THREAD) Symbol(name, len, 1);
     assert(sym != NULL, "new should call vm_exit_out_of_memory if C_HEAP is exhausted");
-  } else { // Arena是使用malloc分配的内存块  相当于直接内存
+  } else { // Arena是使用malloc分配的内存块  相当于直接内存  解析的时候
     // Allocate to global arena
     sym = new (len, arena(), THREAD) Symbol(name, len, -1); // 解析class的时候，string调用这里
   }
@@ -168,7 +168,7 @@ void SymbolTable::possibly_parallel_unlink(int* processed, int* removed) {
                         (memory_total*HeapWordSize)/1024);
   }
 }
-
+// todo rehash_table
 // Create a new table and using alternate hash code, populate the new table
 // with the existing strings.   Set flag to use the alternate hash code afterwards.
 void SymbolTable::rehash_table() {
@@ -461,7 +461,7 @@ bool SymbolTable::basic_add(ClassLoaderData* loader_data, constantPoolHandle cp,
     } else { // 不存在 Symbol
       // Create a new symbol.  The null class loader is never unloaded so these  创建1个新的symbol,空的classLoader永远不会卸载，因此这些专门分配在永久代
       // are allocated specially in a permanent arena.   // java8的metaspace是为了取代permanent
-      bool c_heap = !loader_data->is_the_null_class_loader_data();  // 是否存在类加载器
+      bool c_heap = !loader_data->is_the_null_class_loader_data();  // 是否存在类加载器  是不是解析的时候是true(this == _the_null_class_loader_data)，也就是c_heap=false 　而真正运行的时候是true
       Symbol* sym = allocate_symbol((const u1*)names[i], lengths[i], c_heap, CHECK_(false)); // 分配直接内存
       assert(sym->equals(names[i], lengths[i]), "symbol must be properly initialized");  // why wouldn't it be???
       HashtableEntry<Symbol*, mtSymbol>* entry = new_entry(hashValue, sym);

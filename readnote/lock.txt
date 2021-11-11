@@ -18,3 +18,9 @@
   product(intx, BiasedLockingDecayTime, 25000,                              \
             "Decay time (in milliseconds) to re-enable bulk rebiasing of a "  \
             "type after previous bulk rebias")
+
+
+  InterpreterRuntime::monitorenter
+
+synchronized
+  https://www.yisu.com/zixun/93578.html

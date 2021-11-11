@@ -159,7 +159,7 @@ static volatile int MonitorPopulation = 0 ;      // # Extant -- in circulation
 #define CHAINMARKER (cast_to_oop<intptr_t>(-1))
 
 // -----------------------------------------------------------------------------
-//  Fast Monitor Enter/Exit
+//  Fast Monitor Enter/Exit todo synchronized fast_enter
 // This the fast monitor enter. The interpreter and compiler use
 // some assembly copies of this code. Make sure update those code
 // if the following function is changed. The implementation is
@@ -181,7 +181,7 @@ void ObjectSynchronizer::fast_enter(Handle obj, BasicLock* lock, bool attempt_re
 
  slow_enter (obj, lock, THREAD) ;  // 进入轻量级锁 226
 }
-
+// todo synchronized fast_enter
 void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
   assert(!object->mark()->has_bias_pattern(), "should not see bias pattern here");
   // if displaced header is null, the previous enter is recursive enter, no-op

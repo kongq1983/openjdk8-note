@@ -311,7 +311,7 @@ class markOopDesc: public oopDesc {
   }
   // the following two functions create the markOop to be
   // stored into object header, it encodes monitor info
-  static markOop encode(BasicLock* lock) {
+  static markOop encode(BasicLock* lock) { // markOopDesc::encode((BasicLock*) NULL)
     return (markOop) lock;
   }
   static markOop encode(ObjectMonitor* monitor) {

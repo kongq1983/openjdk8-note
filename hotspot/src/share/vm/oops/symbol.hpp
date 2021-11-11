@@ -118,7 +118,7 @@ class Symbol : private SymbolBase {
   friend class SymbolTable;
   friend class MoveSymbols;
  private:
-  jbyte _body[1];
+  jbyte _body[1];  // todo import-import-import 问题？
 
   enum {
     // max_symbol_length is constrained by type of _length
