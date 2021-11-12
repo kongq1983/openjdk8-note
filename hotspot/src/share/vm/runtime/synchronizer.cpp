@@ -1222,8 +1222,8 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
       // Only that thread can complete inflation -- other threads must wait.
       // The INFLATING value is transient.
       // Currently, we spin/yield/park and poll the markword, waiting for inflation to finish.
-      // We could always eliminate polling by parking the thread on some auxiliary list.
-      if (mark == markOopDesc::INFLATING()) {
+      // We could always eliminate polling by parking the thread on some auxiliary list.  我们总是可以通过parking，将线程停在某个辅助列表上来消除轮询。
+      if (mark == markOopDesc::INFLATING()) { // static markOop INFLATING() { return (markOop) 0; }  INFLATING()=0
          TEVENT (Inflate: spin while INFLATING) ;
          ReadStableMark(object) ;
          continue ;
