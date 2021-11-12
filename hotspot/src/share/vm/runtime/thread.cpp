@@ -315,10 +315,10 @@ void Thread::initialize_thread_local_storage() {
   // initialize structure dependent on thread local storage
   ThreadLocalStorage::set_thread(this);
 }
-
+// todo stack_base
 void Thread::record_stack_base_and_size() {
-  set_stack_base(os::current_stack_base());
-  set_stack_size(os::current_stack_size());
+  set_stack_base(os::current_stack_base()); //  return (bottom + size);
+  set_stack_size(os::current_stack_size()); // size
   if (is_Java_thread()) {
     ((JavaThread*) this)->set_stack_overflow_limit();
   }

@@ -572,7 +572,7 @@ protected:
   void set_has_miranda_methods()        { _access_flags.set_has_miranda_methods(); }
 
   // Biased locking support
-  // Note: the prototype header is always set up to be at least the
+  // Note: the prototype header is always set up to be at least the  header始终设置最近的prototype markOop
   // prototype markOop. If biased locking is enabled it may further be
   // biasable and have an epoch.
   markOop prototype_header() const      { return _prototype_header; }

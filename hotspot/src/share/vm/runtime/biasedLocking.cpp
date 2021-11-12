@@ -267,7 +267,7 @@ enum HeuristicsResult {
 // todo 偏向锁次数  BiasedLockingBulkRebiasThreshold BiasedLockingBulkRevokeThreshold
 static HeuristicsResult update_heuristics(oop o, bool allow_rebias) {
   markOop mark = o->mark();
-  if (!mark->has_bias_pattern()) {
+  if (!mark->has_bias_pattern()) { // 没偏向
     return HR_NOT_BIASED;
   }
 
@@ -338,7 +338,7 @@ static BiasedLocking::Condition bulk_revoke_or_rebias_at_safepoint(oop o,
   Klass* k_o = o->klass();
   Klass* klass = k_o;
 
-  if (bulk_rebias) {
+  if (bulk_rebias) { // 允许重偏向
     // Use the epoch in the klass of the object to implicitly revoke
     // all biases of objects of this data type and force them to be
     // reacquired. However, we also need to walk the stacks of all

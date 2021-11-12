@@ -556,7 +556,7 @@ protected:
 
   bool    on_local_stack(address adr) const { // 在（_stack_base-_stack_size） 和 _stack_base 之间
     /* QQQ this has knowledge of direction, ought to be a stack method */
-    return (_stack_base >= adr && adr >= (_stack_base - _stack_size));
+    return (_stack_base >= adr && adr >= (_stack_base - _stack_size)); // 这里的_stack_base 感觉就是stack的top
   }
 
   uintptr_t self_raw_id()                    { return _self_raw_id; }

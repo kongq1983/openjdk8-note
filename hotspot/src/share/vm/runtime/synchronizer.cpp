@@ -230,7 +230,7 @@ void ObjectSynchronizer::slow_enter(Handle obj, BasicLock* lock, TRAPS) {
   if (mark->is_neutral()) { // 如果是无锁状态  == unlocked_value  0001 无锁  获取轻量级锁一定要无锁
     // Anticipate successful CAS -- the ST of the displaced mark must
     // be visible <= the ST performed by the CAS. cmpxchg_ptr(void*    exchange_value, volatile void*     dest, void*    compare_value)
-    lock->set_displaced_header(mark); //设置Displaced Mark Word并替换对象头的mark word  最右是01
+    lock->set_displaced_header(mark); //设置Displaced Mark Word并替换对象头的mark word  最右是01 备份
     if (mark == (markOop) Atomic::cmpxchg_ptr(lock, obj()->mark_addr(), mark)) { // 62bit 指向栈中锁记录的指针 | 2bit 00  mark_addr() = { return (markOop*) &_mark; }
       TEVENT (slow_enter: release stacklock) ; // 通过CAS将mark word更新为指向BasicLock对象的指针，更新成功表示获得了轻量级锁
       return ;

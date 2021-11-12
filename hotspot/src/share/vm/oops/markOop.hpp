@@ -299,7 +299,7 @@ class markOopDesc: public oopDesc {
     intptr_t ptr = (value() & ~monitor_value);
     *(markOop*)ptr = m;
   }
-  markOop copy_set_hash(intptr_t hash) const {
+  markOop copy_set_hash(intptr_t hash) const { // todo copy_set_hash
     intptr_t tmp = value() & (~hash_mask_in_place);
     tmp |= ((hash & hash_mask) << hash_shift);
     return (markOop)tmp;
