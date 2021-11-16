@@ -41,12 +41,12 @@
 // the complete transitive closure of resolved links that a dynamic linker can
 // produce.
 //
-// A ClassLoaderData also encapsulates the allocation space, called a metaspace,
-// used by the dynamic linker to allocate the runtime representation of all
+// A ClassLoaderData also encapsulates the allocation space, called a metaspace, 一个 ClassLoaderData 也封装了分配空间，称为元空间，
+// used by the dynamic linker to allocate the runtime representation of all 被动态链接器用来分配所有的运行时表示它定义的类型
 // the types it defines.
 //
-// ClassLoaderData are stored in the runtime representation of classes and the
-// system dictionary, are roots of garbage collection, and provides iterators
+// ClassLoaderData are stored in the runtime representation of classes and the          ClassLoaderData存储在类的运行时表示中，并且
+// system dictionary, are roots of garbage collection, and provides iterators           系统字典，是垃圾回收的根，并提供迭代器用于根跟踪和其他 GC 操作。
 // for root tracing and other GC operations.
 
 class ClassLoaderData;
@@ -62,7 +62,7 @@ class ClassLoaderDataGraph : public AllStatic {
   friend class ClassLoaderDataGraphKlassIteratorAtomic;
   friend class VMStructs;
  private:
-  // All CLDs (except the null CLD) can be reached by walking _head->_next->...
+  // All CLDs (except the null CLD) can be reached by walking _head->_next->... 所有 CLD（空 CLD 除外）都可以通过 _head->_next-.
   static ClassLoaderData* _head;
   static ClassLoaderData* _unloading;
   // CMS support.
