@@ -303,9 +303,9 @@ protected:
 
  protected:                                // internal accessors
   Klass* subklass_oop() const            { return _subklass; }
-  Klass* next_sibling_oop() const        { return _next_sibling; }
+  Klass* next_sibling_oop() const        { return _next_sibling; } // todo _next_sibling
   void     set_subklass(Klass* s);
-  void     set_next_sibling(Klass* s);
+  void     set_next_sibling(Klass* s); // todo _next_sibling
 
  public:
 

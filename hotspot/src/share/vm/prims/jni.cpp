@@ -1502,7 +1502,7 @@ JNI_ENTRY(jobject, jni_NewObject(JNIEnv *env, jclass clazz, jmethodID methodID, 
 JNI_END
 
 
-  JNIWrapper("GetObjectClass");
+  JNIWrapper("GetObjectClass"); // todo getClass()
 JNI_ENTRY(jclass, jni_GetObjectClass(JNIEnv *env, jobject obj))
 #ifndef USDT2
   DTRACE_PROBE2(hotspot_jni, GetObjectClass__entry, env, obj);
@@ -1512,7 +1512,7 @@ JNI_ENTRY(jclass, jni_GetObjectClass(JNIEnv *env, jobject obj))
 #endif /* USDT2 */  // oop result = *(oop*)handle;
   Klass* k = JNIHandles::resolve_non_null(obj)->klass(); /* 根据传入的java对象引用找到引用对象然后找到该对象类型的元数据 */  // jniHandles.hpp:183
   jclass ret =
-    (jclass) JNIHandles::make_local(env, k->java_mirror()); /*根据元数据找到java_mirror，也就是java程序中的Class对象实例*/  //jniHandles.cpp:63
+    (jclass) JNIHandles::make_local(env, k->java_mirror()); /*根据元数据找到java_mirror，也就是java程序中的Class对象实例  比如这里是Person.class */  //jniHandles.cpp:63
 #ifndef USDT2
   DTRACE_PROBE1(hotspot_jni, GetObjectClass__return, ret);
 #else /* USDT2 */

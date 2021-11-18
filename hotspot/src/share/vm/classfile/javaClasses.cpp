@@ -483,8 +483,8 @@ void java_lang_String::print(oop java_string, outputStream* st) {
     st->print("\"");
   }
 }
-
-
+// java_lang_Class::initialize_mirror_fields 来调用这里  initialize_mirror_fields  -> initialize_static_field
+// todo 初始化静态字段-import-import
 static void initialize_static_field(fieldDescriptor* fd, Handle mirror, TRAPS) {
   assert(mirror.not_null() && fd->is_static(), "just checking");
   if (fd->has_initial_value()) {
@@ -568,19 +568,19 @@ void java_lang_Class::initialize_mirror_fields(KlassHandle k,
   // Initialize static fields
   InstanceKlass::cast(k())->do_local_static_fields(&initialize_static_field, mirror, CHECK);
 }
-
+// classFileParser.cpp:4173
 void java_lang_Class::create_mirror(KlassHandle k, Handle class_loader,
                                     Handle protection_domain, TRAPS) {
   assert(k->java_mirror() == NULL, "should only assign mirror once");
   // Use this moment of initialization to cache modifier_flags also,
   // to support Class.getModifiers().  Instance classes recalculate
-  // the cached flags after the class file is parsed, but before the
+  // the cached flags after the class file is parsed, but before the 在解析类文件之后，但在类文件之前的缓存标志类被放入系统字典中
   // class is put into the system dictionary.
   int computed_modifiers = k->compute_modifier_flags(CHECK);
   k->set_modifier_flags(computed_modifiers);
   // Class_klass has to be loaded because it is used to allocate
   // the mirror.
-  if (SystemDictionary::Class_klass_loaded()) {
+  if (SystemDictionary::Class_klass_loaded()) { // 是否已加载
     // Allocate mirror (java.lang.Class instance)
     Handle mirror = InstanceMirrorKlass::cast(SystemDictionary::Class_klass())->allocate_instance(k, CHECK);
 
@@ -591,11 +591,11 @@ void java_lang_Class::create_mirror(KlassHandle k, Handle class_loader,
 
     InstanceMirrorKlass* mk = InstanceMirrorKlass::cast(mirror->klass());
     assert(oop_size(mirror()) == mk->instance_size(k), "should have been set");
-
+    // 这里传过去的是mirror()  static传进去都是mirror()
     java_lang_Class::set_static_oop_field_count(mirror(), mk->compute_static_oop_field_count(mirror()));
 
     // It might also have a component mirror.  This mirror must already exist.
-    if (k->oop_is_array()) {
+    if (k->oop_is_array()) { // 数组
       Handle comp_mirror;
       if (k->oop_is_typeArray()) {
         BasicType type = TypeArrayKlass::cast(k())->element_type();
@@ -611,7 +611,7 @@ void java_lang_Class::create_mirror(KlassHandle k, Handle class_loader,
       // Two-way link between the array klass and its component mirror:
       ArrayKlass::cast(k())->set_component_mirror(comp_mirror());
       set_array_klass(comp_mirror(), k());
-    } else {
+    } else { // todo mirror
       assert(k->oop_is_instance(), "Must be");
 
       initialize_mirror_fields(k, mirror, protection_domain, THREAD);
@@ -632,7 +632,7 @@ void java_lang_Class::create_mirror(KlassHandle k, Handle class_loader,
     // Setup indirection from klass->mirror last
     // after any exceptions can happen during allocations.
     if (!k.is_null()) {
-      k->set_java_mirror(mirror());
+      k->set_java_mirror(mirror()); // todo 设置java_mirror
     }
   } else {
     if (fixup_mirror_list() == NULL) {
@@ -840,7 +840,7 @@ BasicType java_lang_Class::as_BasicType(oop java_class, Klass** reference_klass)
   }
 }
 
-
+// javaClasses.cpp : 844
 oop java_lang_Class::primitive_mirror(BasicType t) {
   oop mirror = Universe::java_mirror(t);
   assert(mirror != NULL && mirror->is_a(SystemDictionary::Class_klass()), "must be a Class");

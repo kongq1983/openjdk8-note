@@ -68,17 +68,17 @@ class outputStream;
 class SpaceManager;
 class VirtualSpaceList;
 
-// Metaspaces each have a  SpaceManager and allocations
-// are done by the SpaceManager.  Allocations are done
-// out of the current Metachunk.  When the current Metachunk
-// is exhausted, the SpaceManager gets a new one from
-// the current VirtualSpace.  When the VirtualSpace is exhausted
+// Metaspaces each have a  SpaceManager and allocations  每个元空间都有一个 SpaceManager 和分配
+// are done by the SpaceManager.  Allocations are done   由 SpaceManager 完成。
+// out of the current Metachunk.  When the current Metachunk  分配完成出当前的 Metachunk。
+// is exhausted, the SpaceManager gets a new one from       当当前 Metachunk用完了，SpaceManager 从中获取一个新的当前VirtualSpace。
+// the current VirtualSpace.  When the VirtualSpace is exhausted  当 VirtualSpace 耗尽时
 // the SpaceManager gets a new one.  The SpaceManager
-// also manages freelists of available Chunks.
+// also manages freelists of available Chunks.   得到一个新的SpaceManager 。 SpaceManager还管理可用块的空闲列表
 //
-// Currently the space manager maintains the list of
-// virtual spaces and the list of chunks in use.  Its
-// allocate() method returns a block for use as a
+// Currently the space manager maintains the list of    当前空间管理器维护的列表
+// virtual spaces and the list of chunks in use.  Its   虚拟空间和正在使用的块列表
+// allocate() method returns a block for use as a   它的allocate() 方法返回一个块用作元数据量
 // quantum of metadata.
 
 class Metaspace : public CHeapObj<mtClass> {

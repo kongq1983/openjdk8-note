@@ -25,22 +25,22 @@
 #ifndef SHARE_VM_ADLC_ARENA_HPP
 #define SHARE_VM_ADLC_ARENA_HPP
 
-// All classes in the virtual machine must be subclassed
-// by one of the following allocation classes:
+// All classes in the virtual machine must be subclassed  虚拟机中的所有类都必须是子类
+// by one of the following allocation classes:   通过以下分配类之一：
 //
-//
-// For objects allocated in the C-heap (managed by: free & malloc).
+// malloc是分配一块连续的内存
+// For objects allocated in the C-heap (managed by: free & malloc).  对于在 C 堆中分配的对象（由：free & malloc 管理）
 // - CHeapObj
 //
 //
-// For embedded objects.
-// - ValueObj
+// For embedded objects.   对于嵌入对象
+// - ValueObj    值对象
 //
-// For classes used as name spaces.
-// - AllStatic
+// For classes used as name spaces.   对于用作命名空间的类
+// - AllStatic   所有静态
 //
 
-class CHeapObj {
+class CHeapObj { // free & malloc
  public:
   void* operator new(size_t size) throw();
   void  operator delete(void* p);
@@ -48,8 +48,8 @@ class CHeapObj {
 };
 
 
-// Base class for objects used as value objects.
-// Calling new or delete will result in fatal error.
+// Base class for objects used as value objects.     用作值对象的对象的基类
+// Calling new or delete will result in fatal error.   调用 new 或 delete 会导致致命错误
 
 class ValueObj {
  public:
