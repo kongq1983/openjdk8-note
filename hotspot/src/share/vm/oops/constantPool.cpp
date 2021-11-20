@@ -775,10 +775,10 @@ oop ConstantPool::resolve_constant_at_impl(constantPoolHandle this_oop, int inde
     return result_oop;
   }
 }
-
+// todo String.intern口子
 oop ConstantPool::uncached_string_at(int which, TRAPS) {
   Symbol* sym = unresolved_string_at(which);
-  oop str = StringTable::intern(sym, CHECK_(NULL));
+  oop str = StringTable::intern(sym, CHECK_(NULL)); // 这里intern
   assert(java_lang_String::is_instance(str), "must be string");
   return str;
 }

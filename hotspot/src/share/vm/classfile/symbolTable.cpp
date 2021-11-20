@@ -746,10 +746,10 @@ oop StringTable::intern(Handle string_or_null, jchar* name,
 
   Handle string;
   // try to reuse the string if possible
-  if (!string_or_null.is_null()) { // 到这里，就是常量池不存在该字符  上面常量池中不存在，则重用堆中的string对象(第一个调用intern那个堆中的对象)
+  if (!string_or_null.is_null()) { // 重用String 重用Handle
     string = string_or_null;
   } else {
-    string = java_lang_String::create_from_unicode(name, len, CHECK_NULL);
+    string = java_lang_String::create_from_unicode(name, len, CHECK_NULL);  // 创建String  name是value
   }
 
 #if INCLUDE_ALL_GCS

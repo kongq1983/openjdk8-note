@@ -310,7 +310,7 @@ static HeuristicsResult update_heuristics(oop o, bool allow_rebias) {
     return HR_BULK_REVOKE;
   }
 
-  if (revocation_count == BiasedLockingBulkRebiasThreshold) { // 再偏向达到20次
+  if (revocation_count == BiasedLockingBulkRebiasThreshold) { // 重偏向达到20次
     return HR_BULK_REBIAS;
   }
 

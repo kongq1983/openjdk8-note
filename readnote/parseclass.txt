@@ -103,4 +103,6 @@ hashValues[names_count++] = hash;  //hash     // 然后names_count++
   static ClassLoaderData * _the_null_class_loader_data; //启动类加载器对应的ClassLoaderData
   oop _class_loader；//关联的Java ClassLoader实例
 
+  javaClasses.cpp
+
 

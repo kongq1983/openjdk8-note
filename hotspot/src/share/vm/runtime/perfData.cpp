@@ -234,15 +234,15 @@ PerfByteArray::PerfByteArray(CounterNS ns, const char* namep, Units u,
 
   create_entry(T_BYTE, sizeof(jbyte), (size_t)_length);
 }
-
+// todo string 复制 把s2复制到_valuep
 void PerfString::set_string(const char* s2) {
 
   // copy n bytes of the string, assuring the null string is
   // copied if s2 == NULL.
   strncpy((char *)_valuep, s2 == NULL ? "" : s2, _length);
-
+    // 库函数 char *strncpy(char *dest, const char *src, size_t n) 把 src 所指向的字符串复制到 dest，最多复制 n 个字符。当 src 的长度小于 n 时，dest 的剩余部分将用空字节填充
   // assure the string is null terminated when strlen(s2) >= _length
-  ((char*)_valuep)[_length-1] = '\0';
+  ((char*)_valuep)[_length-1] = '\0'; // 结束
 }
 
 int PerfString::format(char* buffer, int length) {

@@ -160,7 +160,7 @@ void java_lang_String::compute_offsets() {
 
   initialized = true;
 }
-// 与new构造逻辑并无二致
+// todo String的new 与new构造逻辑并无二致 String-import-import-import
 Handle java_lang_String::basic_create(int length, TRAPS) {
   assert(initialized, "Must be initialized");
   // Create the String object first, so there's a chance that the String
@@ -176,7 +176,7 @@ Handle java_lang_String::basic_create(int length, TRAPS) {
 
   // Point the String at the char array
   obj = h_obj();
-  set_value(obj, buffer);
+  set_value(obj, buffer); // 设置value  perfData.hpp  perfData.cpp
   // No need to zero the offset, allocation zero'ed the entire String object
   assert(offset(obj) == 0, "initial String offset should be zero");
 //set_offset(obj, 0);
@@ -184,10 +184,10 @@ Handle java_lang_String::basic_create(int length, TRAPS) {
 
   return h_obj;
 }
-
+// todo String.intern 会调用这里
 Handle java_lang_String::create_from_unicode(jchar* unicode, int length, TRAPS) {
-  Handle h_obj = basic_create(length, CHECK_NH);
-  typeArrayOop buffer = value(h_obj());
+  Handle h_obj = basic_create(length, CHECK_NH);// 还是调用basic_create
+  typeArrayOop buffer = value(h_obj()); // value[]的typeArrayOop
   for (int index = 0; index < length; index++) {
     buffer->char_at_put(index, unicode[index]);
   }
@@ -195,16 +195,16 @@ Handle java_lang_String::create_from_unicode(jchar* unicode, int length, TRAPS) 
 }
 
 oop java_lang_String::create_oop_from_unicode(jchar* unicode, int length, TRAPS) {
-  Handle h_obj = create_from_unicode(unicode, length, CHECK_0);
+  Handle h_obj = create_from_unicode(unicode, length, CHECK_0); // 最终调用basic_create
   return h_obj();
 }
-
+// todo 根据str创建  universe.cpp:1076
 Handle java_lang_String::create_from_str(const char* utf8_str, TRAPS) {
   if (utf8_str == NULL) {
     return Handle();
   }
-  int length = UTF8::unicode_length(utf8_str);
-  Handle h_obj = basic_create(length, CHECK_NH);
+  int length = UTF8::unicode_length(utf8_str); // 长度
+  Handle h_obj = basic_create(length, CHECK_NH); // 还是调用basic_create
   if (length > 0) {
     UTF8::convert_to_unicode(utf8_str, value(h_obj())->char_at_addr(0), length);
   }
