@@ -394,7 +394,7 @@ bool klassVtable::update_inherited_vtable(InstanceKlass* klass, methodHandle tar
 
   Symbol* target_classname = target_klass->name();
   for(int i = 0; i < super_vtable_len; i++) {
-    Method* super_method = method_at(i); // 父类从vtable()取出的方法
+    Method* super_method = method_at(i); // 父类从vtable()取出的方法  i同时是该方法的位置
     // Check if method name matches
     if (super_method->name() == name && super_method->signature() == signature) {
          // 子类覆盖的方法才进入这里的逻辑 (也就是子类和父类同时存在)
@@ -451,10 +451,10 @@ bool klassVtable::update_inherited_vtable(InstanceKlass* klass, methodHandle tar
           }
        }
 
-       put_method_at(target_method(), i);
-       if (!is_default) {
-         target_method()->set_vtable_index(i);
-       } else {
+       put_method_at(target_method(), i); // i是该访问的位置
+       if (!is_default) {  // 非默认方法
+         target_method()->set_vtable_index(i);  //当前方法在vtable中的第一个位置
+       } else { // 默认方法
          if (def_vtable_indices != NULL) {
            def_vtable_indices->at_put(default_index, i);
          }
@@ -538,7 +538,7 @@ void klassVtable::put_method_at(Method* m, int index) {
     tty->cr();
   }
 #endif
-  table()[index].set(m);
+  table()[index].set(m);  // 替换
 }
 
 // Find out if a method "m" with superclass "super", loader "classloader" and
