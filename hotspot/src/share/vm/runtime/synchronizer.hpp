@@ -129,9 +129,9 @@ class ObjectSynchronizer : AllStatic {
  private:
   enum { _BLOCKSIZE = 128 };
   static ObjectMonitor* gBlockList;
-  static ObjectMonitor * volatile gFreeList;
+  static ObjectMonitor * volatile gFreeList; // gOmInUseList： 全局的正在使用的ObjectMonitor链表，只有MonitorInUseLists为true时才有值
   static ObjectMonitor * volatile gOmInUseList; // for moribund thread, so monitors they inflated still get scanned
-  static int gOmInUseCount;
+  static int gOmInUseCount;  // gOmInUseList中包含的元素个数
 
 };
 

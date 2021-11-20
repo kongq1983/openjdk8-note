@@ -556,7 +556,7 @@ void MethodHandles::print_as_basic_type_signature_on(outputStream* st,
 }
 
 
-
+// todo java_mirror()
 static oop object_java_mirror() {
   return SystemDictionary::Object_klass()->java_mirror();
 }
@@ -565,11 +565,11 @@ oop MethodHandles::field_name_or_null(Symbol* s) {
   if (s == NULL)  return NULL;
   return StringTable::lookup(s);
 }
-
+// todo java_mirror()
 oop MethodHandles::field_signature_type_or_null(Symbol* s) {
   if (s == NULL)  return NULL;
   BasicType bt = FieldType::basic_type(s);
-  if (is_java_primitive(bt)) {
+  if (is_java_primitive(bt)) {  // 基本类型
     assert(s->utf8_length() == 1, "");
     return java_lang_Class::primitive_mirror(bt);
   }

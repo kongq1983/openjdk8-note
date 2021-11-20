@@ -357,12 +357,12 @@ int InstanceMirrorKlass::instance_size(KlassHandle k) {
   }
   return size_helper();
 }
-
+// todo 堆中分配
 instanceOop InstanceMirrorKlass::allocate_instance(KlassHandle k, TRAPS) {
   // Query before forming handle.
   int size = instance_size(k);
   KlassHandle h_k(THREAD, this);
-  instanceOop i = (instanceOop)CollectedHeap::obj_allocate(h_k, size, CHECK_NULL);
+  instanceOop i = (instanceOop)CollectedHeap::obj_allocate(h_k, size, CHECK_NULL); // CollectedHeap管理的Java堆内存中创建对象
 
   // Since mirrors can be variable sized because of the static fields, store
   // the size in the mirror itself.
@@ -374,7 +374,7 @@ instanceOop InstanceMirrorKlass::allocate_instance(KlassHandle k, TRAPS) {
 int InstanceMirrorKlass::oop_size(oop obj) const {
   return java_lang_Class::oop_size(obj);
 }
-
+// todo 计算static field size
 int InstanceMirrorKlass::compute_static_oop_field_count(oop obj) {
   Klass* k = java_lang_Class::as_Klass(obj);
   if (k != NULL && k->oop_is_instance()) {

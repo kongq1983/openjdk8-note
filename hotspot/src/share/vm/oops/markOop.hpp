@@ -226,13 +226,13 @@ class markOopDesc: public oopDesc {
   // Code that looks at mark outside a lock need to take this into account.
   bool is_being_inflated() const { return (value() == 0); }
 
-  // Distinguished markword value - used when inflating over
-  // an existing stacklock.  0 indicates the markword is "BUSY".
-  // Lockword mutators that use a LD...CAS idiom should always
-  // check for and avoid overwriting a 0 value installed by some
-  // other thread.  (They should spin or block instead.  The 0 value
-  // is transient and *should* be short-lived).
-  static markOop INFLATING() { return (markOop) 0; }    // inflate-in-progress
+  // Distinguished markword value - used when inflating over 可分辨的标记字值 - 在膨胀时使用
+  // an existing stacklock.  0 indicates the markword is "BUSY".  // 一个现有的堆栈锁。 0 表示标记字为“BUSY”
+  // Lockword mutators that use a LD...CAS idiom should always  使用 LD...CAS 惯用语的锁字修改器应该总是
+  // check for and avoid overwriting a 0 value installed by some  检查并避免覆盖其他线程安装的0值
+  // other thread.  (They should spin or block instead.  The 0 value  （他们应该旋转或阻塞。
+  // is transient and *should* be short-lived).  0值是暂时的，并且*应该*是短暂的）。
+  static markOop INFLATING() { return (markOop) 0; }    // inflate-in-progress todo INFLATING
 
   // Should this header be preserved during GC?
   inline bool must_be_preserved(oop obj_containing_mark) const;
@@ -299,7 +299,7 @@ class markOopDesc: public oopDesc {
     intptr_t ptr = (value() & ~monitor_value);
     *(markOop*)ptr = m;
   }
-  markOop copy_set_hash(intptr_t hash) const {
+  markOop copy_set_hash(intptr_t hash) const { // todo copy_set_hash
     intptr_t tmp = value() & (~hash_mask_in_place);
     tmp |= ((hash & hash_mask) << hash_shift);
     return (markOop)tmp;

@@ -263,15 +263,15 @@ void CollectedHeap::check_for_valid_allocation_state() {
 
 HeapWord* CollectedHeap::allocate_from_tlab_slow(KlassHandle klass, Thread* thread, size_t size) {
 
-  // Retain tlab and allocate object in shared space if
-  // the amount free in the tlab is too large to discard.
+  // Retain tlab and allocate object in shared space if 保留 tlab 并在共享空间中分配对象，
+  // the amount free in the tlab is too large to discard.  如果tlab 中的空闲量太大而无法丢弃。
   if (thread->tlab().free() > thread->tlab().refill_waste_limit()) {
     thread->tlab().record_slow_allocation(size);
     return NULL;
   }
 
-  // Discard tlab and allocate a new one.
-  // To minimize fragmentation, the last TLAB may be smaller than the rest.
+  // Discard tlab and allocate a new one.  丢弃 tlab 并分配一个新的
+  // To minimize fragmentation, the last TLAB may be smaller than the rest.  为了尽量减少碎片，最后一个 TLAB 可能比其余的小
   size_t new_tlab_size = thread->tlab().compute_size(size);
 
   thread->tlab().clear_before_allocation();
@@ -280,7 +280,7 @@ HeapWord* CollectedHeap::allocate_from_tlab_slow(KlassHandle klass, Thread* thre
     return NULL;
   }
 
-  // Allocate a new TLAB...
+  // Allocate a new TLAB...   分配1个新的TLAB
   HeapWord* obj = Universe::heap()->allocate_new_tlab(new_tlab_size);
   if (obj == NULL) {
     return NULL;

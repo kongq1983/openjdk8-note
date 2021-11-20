@@ -447,7 +447,7 @@ void Universe::init_self_patching_vtbl_list(void** list, int count) {
   { Method o;                 add_vtable(list, &n, &o, count); }
   { ConstantPool o;           add_vtable(list, &n, &o, count); }
 }
-
+// todo 基本类型的 _java_mirrors
 void Universe::initialize_basic_type_mirrors(TRAPS) {
     assert(_int_mirror==NULL, "basic type mirrors already initialized");
     _int_mirror     =

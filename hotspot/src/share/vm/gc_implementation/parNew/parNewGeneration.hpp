@@ -383,8 +383,8 @@ class ParNewGeneration: public DefNewGeneration {
                        bool   is_tlab);
 
   // This needs to be visible to the closure function.
-  // "obj" is the object to be copied, "m" is a recent value of its mark
-  // that must not contain a forwarding pointer (though one might be
+  // "obj" is the object to be copied, "m" is a recent value of its mark  "obj" 是要复制的对象，"m" 是其标记的最近值
+  // that must not contain a forwarding pointer (though one might be  不得包含转发指针（尽管可能是由并行线程插入到“obj”的标记词中）
   // inserted in "obj"s mark word by a parallel thread).
   inline oop copy_to_survivor_space(ParScanThreadState* par_scan_state,
                              oop obj, size_t obj_sz, markOop m) {

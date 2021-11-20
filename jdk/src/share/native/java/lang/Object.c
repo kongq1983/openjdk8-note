@@ -53,7 +53,7 @@ Java_java_lang_Object_registerNatives(JNIEnv *env, jclass cls)
     (*env)->RegisterNatives(env, cls,
                             methods, sizeof(methods)/sizeof(methods[0]));
 }
-
+// todo getClass()
 JNIEXPORT jclass JNICALL
 Java_java_lang_Object_getClass(JNIEnv *env, jobject this)
 {
@@ -61,6 +61,6 @@ Java_java_lang_Object_getClass(JNIEnv *env, jobject this)
         JNU_ThrowNullPointerException(env, NULL);
         return 0;
     } else {
-        return (*env)->GetObjectClass(env, this);  //todo Object.getClass()
+        return (*env)->GetObjectClass(env, this);  //todo Object.getClass()   jni.cpp:1506
     }
 }

@@ -140,14 +140,14 @@ const int SerializePageShiftCount = 4;
 const int SerializePageShiftCount = 3;
 #endif
 
-// An opaque struct of heap-word width, so that HeapWord* can be a generic
-// pointer into the heap.  We require that object sizes be measured in
-// units of heap words, so that that
+// An opaque struct of heap-word width, so that HeapWord* can be a generic  堆字宽度的不透明结构，因此 HeapWord* 可以是泛型
+// pointer into the heap.  We require that object sizes be measured in      指向堆的指针。 我们要求测量units of heap words
+// units of heap words, so that that 因此
 //   HeapWord* hw;
 //   hw += oop(hw)->foo();
-// works, where foo is a method (like size or scavenge) that returns the
+// works, where foo is a method (like size or scavenge) that returns the   其中 foo 是一个方法（如 size 或 scavenge），它返回对象大小
 // object size.
-class HeapWord {
+class HeapWord { // todo HeapWord
   friend class VMStructs;
  private:
   char* i;

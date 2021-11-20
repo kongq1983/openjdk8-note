@@ -739,7 +739,7 @@ void /*ParNewGeneration::*/KeepAliveClosure::do_oop_work(T* p) {
 
 void /*ParNewGeneration::*/KeepAliveClosure::do_oop(oop* p)       { KeepAliveClosure::do_oop_work(p); }
 void /*ParNewGeneration::*/KeepAliveClosure::do_oop(narrowOop* p) { KeepAliveClosure::do_oop_work(p); }
-
+// todo parNew GC work
 template <class T> void ScanClosureWithParBarrier::do_oop_work(T* p) {
   T heap_oop = oopDesc::load_heap_oop(p);
   if (!oopDesc::is_null(heap_oop)) {
@@ -752,7 +752,7 @@ template <class T> void ScanClosureWithParBarrier::do_oop_work(T* p) {
       oopDesc::encode_store_heap_oop_not_null(p, new_obj);
     }
     if (_gc_barrier) {
-      // If p points to a younger generation, mark the card.
+      // If p points to a younger generation, mark the card.  如果p指向年轻代，则标记卡片
       if ((HeapWord*)obj < _gen_boundary) {
         _rs->write_ref_field_gc_par(p, obj);
       }
@@ -1151,14 +1151,14 @@ void ParNewGeneration::preserve_mark_if_necessary(oop obj, markOop m) {
   }
 }
 
-// Multiple GC threads may try to promote an object.  If the object
-// is successfully promoted, a forwarding pointer will be installed in
-// the object in the young generation.  This method claims the right
-// to install the forwarding pointer before it copies the object,
-// thus avoiding the need to undo the copy as in
+// Multiple GC threads may try to promote an object.  If the object  多个 GC 线程可能会尝试提升一个对象。 如果对象
+// is successfully promoted, a forwarding pointer will be installed in  // 成功提升，将安装一个转发指针
+// the object in the young generation.  This method claims the right   在年轻代中的对象。 该方法主张权利
+// to install the forwarding pointer before it copies the object,     在复制对象之前安装转发指针，
+// thus avoiding the need to undo the copy as in   从而避免需要撤销复制
 // copy_to_survivor_space_avoiding_with_undo.
 
-oop ParNewGeneration::copy_to_survivor_space_avoiding_promotion_undo(
+oop ParNewGeneration::copy_to_survivor_space_avoiding_promotion_undo( // avoiding_promotion_undo;避免升级撤消
         ParScanThreadState* par_scan_state, oop old, size_t sz, markOop m) {
   // In the sequential version, this assert also says that the object is
   // not forwarded.  That might not be the case here.  It is the case that
@@ -1167,37 +1167,37 @@ oop ParNewGeneration::copy_to_survivor_space_avoiding_promotion_undo(
 
   // The sequential code read "old->age()" below.  That doesn't work here,
   // since the age is in the mark word, and that might be overwritten with
-  // a forwarding pointer by a parallel thread.  So we must save the mark
+  // a forwarding pointer by a parallel thread.  So we must save the mark  一个并行线程的转发指针。 所以我们必须保存标记在一个本地单词中，然后对其进行分析。
   // word in a local and then analyze it.
   oopDesc dummyOld;
   dummyOld.set_mark(m);
   assert(!dummyOld.is_forwarded(),
          "should not be called with forwarding pointer mark word.");
-
+    // 比如从s1(from) -> s2(to)   个人理解 　　年轻代 -> 老年代  这个时候handle的指针要替换
   oop new_obj = NULL;
   oop forward_ptr;
 
-  // Try allocating obj in to-space (unless too old)
-  if (dummyOld.age() < tenuring_threshold()) {
-    new_obj = (oop)par_scan_state->alloc_in_to_space(sz);
-    if (new_obj == NULL) {
+  // Try allocating obj in to-space (unless too old)　　尝试在 to-space 中分配 obj （除非太旧）
+  if (dummyOld.age() < tenuring_threshold()) { // 小于阀值  _tenuring_threshold = MaxTenuringThreshold; // 进入老年代的阀值
+    new_obj = (oop)par_scan_state->alloc_in_to_space(sz);  // 在to_space分配空间　待验证
+    if (new_obj == NULL) { // to_space分配空间失败
       set_survivor_overflow(true);
     }
   }
-
+  // to-space空间已满　或者　 decided to promote
   if (new_obj == NULL) {
     // Either to-space is full or we decided to promote
     // try allocating obj tenured
 
-    // Attempt to install a null forwarding pointer (atomically),
-    // to claim the right to install the real forwarding pointer.
+    // Attempt to install a null forwarding pointer (atomically), 尝试安装一个空转发指针（以原子方式），
+    // to claim the right to install the real forwarding pointer. 要求安装真实转发指针的权利
     forward_ptr = old->forward_to_atomic(ClaimedForwardPtr);
-    if (forward_ptr != NULL) {
+    if (forward_ptr != NULL) { // 指针转发成功
       // someone else beat us to it.
         return real_forwardee(old);
     }
-
-    new_obj = _next_gen->par_promote(par_scan_state->thread_num(),
+    // 指针转发失败
+    new_obj = _next_gen->par_promote(par_scan_state->thread_num(),  // 关注ShouldNotCallThis()
                                        old, m, sz);
 
     if (new_obj == NULL) {

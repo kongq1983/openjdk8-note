@@ -315,10 +315,10 @@ void Thread::initialize_thread_local_storage() {
   // initialize structure dependent on thread local storage
   ThreadLocalStorage::set_thread(this);
 }
-
+// todo stack_base
 void Thread::record_stack_base_and_size() {
-  set_stack_base(os::current_stack_base());
-  set_stack_size(os::current_stack_size());
+  set_stack_base(os::current_stack_base()); //  return (bottom + size);
+  set_stack_size(os::current_stack_size()); // size
   if (is_Java_thread()) {
     ((JavaThread*) this)->set_stack_overflow_limit();
   }
@@ -1420,7 +1420,7 @@ void WatcherThread::print_on(outputStream* st) const {
 // ======= JavaThread ========
 
 // A JavaThread is a normal Java thread
-
+// todo java线程初始化
 void JavaThread::initialize() {
   // Initialize fields
 
@@ -1592,7 +1592,7 @@ JavaThread::JavaThread(ThreadFunction entry_point, size_t stack_sz) :
   // by calling Threads:add. The reason why this is not done here, is because the thread
   // object must be fully initialized (take a look at JVM_Start)
 }
-
+// todo javaThread析构函数   释放资源
 JavaThread::~JavaThread() {
   if (TraceThreadEvents) {
       tty->print_cr("terminate thread %p", this);
@@ -4627,27 +4627,27 @@ void Thread::muxAcquireW (volatile intptr_t * Lock, ParkEvent * ev) {
   }
 }
 
-// Release() must extract a successor from the list and then wake that thread.
-// It can "pop" the front of the list or use a detach-modify-reattach (DMR) scheme
-// similar to that used by ParkEvent::Allocate() and ::Release().  DMR-based
-// Release() would :
-// (A) CAS() or swap() null to *Lock, releasing the lock and detaching the list.
-// (B) Extract a successor from the private list "in-hand"
-// (C) attempt to CAS() the residual back into *Lock over null.
-//     If there were any newly arrived threads and the CAS() would fail.
-//     In that case Release() would detach the RATs, re-merge the list in-hand
-//     with the RATs and repeat as needed.  Alternately, Release() might
-//     detach and extract a successor, but then pass the residual list to the wakee.
-//     The wakee would be responsible for reattaching and remerging before it
+// Release() must extract a successor from the list and then wake that thread.          Release() 必须从列表中提取一个后继，然后唤醒该线程
+// It can "pop" the front of the list or use a detach-modify-reattach (DMR) scheme      它可以“弹出”列表的前面或使用分离-修改-重新附加 (DMR) 方案
+// similar to that used by ParkEvent::Allocate() and ::Release().  DMR-based            类似于 ParkEvent::Allocate() 和 ::Release() 使用的。基于 DMR
+// Release() would :                                                                    Release() 将：
+// (A) CAS() or swap() null to *Lock, releasing the lock and detaching the list.        (A) CAS() 或 swap() null 到 *Lock，释放锁并分离列表
+// (B) Extract a successor from the private list "in-hand"                              (B) 从“in-hand”私有列表中提取一个后继
+// (C) attempt to CAS() the residual back into *Lock over null.                         (C) 尝试将剩余的CAS() 返回到 *Lock over null。
+//     If there were any newly arrived threads and the CAS() would fail.                如果有任何新到达的线程并且 CAS() 将失败。
+//     In that case Release() would detach the RATs, re-merge the list in-hand          在这种情况下，Release() 将分离 RAT，重新合并手中的列表
+//     with the RATs and repeat as needed.  Alternately, Release() might                使用 RAT 并根据需要重复。或者， Release() 可能
+//     detach and extract a successor, but then pass the residual list to the wakee.    分离并提取一个后继，然后将剩余列表传递给唤醒。
+//     The wakee would be responsible for reattaching and remerging before it           唤醒者将负责在它之前重新连接和重新合并，争夺锁。
 //     competed for the lock.
 //
-// Both "pop" and DMR are immune from ABA corruption -- there can be
-// multiple concurrent pushers, but only one popper or detacher.
-// This implementation pops from the head of the list.  This is unfair,
-// but tends to provide excellent throughput as hot threads remain hot.
-// (We wake recently run threads first).
+// Both "pop" and DMR are immune from ABA corruption -- there can be                   "pop" 和 DMR 都不受 ABA 损坏的影响——可能有
+// multiple concurrent pushers, but only one popper or detacher.                       多个并发推送器，但只有一个弹出器或分离器。
+// This implementation pops from the head of the list.  This is unfair,                这个实现从列表的头部弹出。这不公平，
+// but tends to provide excellent throughput as hot threads remain hot.                但往往会提供出色的吞吐量，as hot threads remain hot
+// (We wake recently run threads first).                                               我们首先唤醒最近运行的线程
 
-void Thread::muxRelease (volatile intptr_t * Lock)  {
+void Thread::muxRelease (volatile intptr_t * Lock)  {  // 释放锁
   for (;;) {
     const intptr_t w = Atomic::cmpxchg_ptr (0, Lock, LOCKBIT) ;
     assert (w & LOCKBIT, "invariant") ;

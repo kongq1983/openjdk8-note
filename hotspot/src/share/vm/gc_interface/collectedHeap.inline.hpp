@@ -205,7 +205,7 @@ oop CollectedHeap::obj_allocate(KlassHandle klass, int size, TRAPS) {
   NOT_PRODUCT(Universe::heap()->check_for_bad_heap_word_value(obj, size));
   return (oop)obj;
 }
-
+// todo 数组创建
 oop CollectedHeap::array_allocate(KlassHandle klass,
                                   int size,
                                   int length,
@@ -218,7 +218,7 @@ oop CollectedHeap::array_allocate(KlassHandle klass,
   NOT_PRODUCT(Universe::heap()->check_for_bad_heap_word_value(obj, size));
   return (oop)obj;
 }
-
+// todo  创建空数组
 oop CollectedHeap::array_allocate_nozero(KlassHandle klass,
                                          int size,
                                          int length,

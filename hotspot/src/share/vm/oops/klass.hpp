@@ -303,9 +303,9 @@ protected:
 
  protected:                                // internal accessors
   Klass* subklass_oop() const            { return _subklass; }
-  Klass* next_sibling_oop() const        { return _next_sibling; }
+  Klass* next_sibling_oop() const        { return _next_sibling; } // todo _next_sibling
   void     set_subklass(Klass* s);
-  void     set_next_sibling(Klass* s);
+  void     set_next_sibling(Klass* s); // todo _next_sibling
 
  public:
 
@@ -572,7 +572,7 @@ protected:
   void set_has_miranda_methods()        { _access_flags.set_has_miranda_methods(); }
 
   // Biased locking support
-  // Note: the prototype header is always set up to be at least the
+  // Note: the prototype header is always set up to be at least the  header始终设置最近的prototype markOop
   // prototype markOop. If biased locking is enabled it may further be
   // biasable and have an epoch.
   markOop prototype_header() const      { return _prototype_header; }

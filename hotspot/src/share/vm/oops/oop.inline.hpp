@@ -155,7 +155,7 @@ inline bool oopDesc::is_instanceRef()         const { return klass()->oop_is_ins
 inline bool oopDesc::is_array()               const { return klass()->oop_is_array(); }
 inline bool oopDesc::is_objArray()            const { return klass()->oop_is_objArray(); }
 inline bool oopDesc::is_typeArray()           const { return klass()->oop_is_typeArray(); }
-
+// 存储位置最终放在 mirror 对象偏移为 offset 处，这个 offset 就是之前对 field 设置的 offset
 inline void*     oopDesc::field_base(int offset)        const { return (void*)&((char*)this)[offset]; }
 
 template <class T> inline T* oopDesc::obj_field_addr(int offset) const { return (T*)field_base(offset); }

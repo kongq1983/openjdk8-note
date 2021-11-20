@@ -458,8 +458,8 @@ void InstanceKlass::deallocate_contents(ClassLoaderData* loader_data) {
 bool InstanceKlass::should_be_initialized() const {
   return !is_initialized();
 }
-
-klassVtable* InstanceKlass::vtable() const {
+// todo start_of_vtable()获取vtable的起始地址    vtable_length()获取_vtable_len的值
+klassVtable* InstanceKlass::vtable() const { // todo vtable()
   return new klassVtable(this, start_of_vtable(), vtable_length() / vtableEntry::size());
 }
 

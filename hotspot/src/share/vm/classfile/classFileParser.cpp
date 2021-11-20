@@ -3175,7 +3175,7 @@ class FieldLayoutInfo : public StackObj {
   bool          has_nonstatic_fields;
 };
 
-// Layout fields and fill in FieldLayoutInfo.  Could use more refactoring!
+// Layout fields and fill in FieldLayoutInfo.  Could use more refactoring! todo field
 void ClassFileParser::layout_fields(Handle class_loader,
                                     FieldAllocationCount* fac,
                                     ClassAnnotationCollector* parsed_annotations,
@@ -3230,7 +3230,7 @@ void ClassFileParser::layout_fields(Handle class_loader,
   next_static_short_offset    = next_static_word_offset +
                                 ((fac->count[STATIC_WORD]) * BytesPerInt);
   next_static_byte_offset     = next_static_short_offset +
-                                ((fac->count[STATIC_SHORT]) * BytesPerShort);
+                                ((fac->count[STATIC_SHORT]) * BytesPerShort); // todo 最终转成 next_static_byte_offset
 
   int nonstatic_fields_start  = instanceOopDesc::base_offset_in_bytes() +
                                 nonstatic_field_size * heapOopSize;
@@ -3290,7 +3290,7 @@ void ClassFileParser::layout_fields(Handle class_loader,
   int  allocation_style = FieldsAllocationStyle;
   if( allocation_style < 0 || allocation_style > 2 ) { // Out of range?
     assert(false, "0 <= FieldsAllocationStyle <= 2");
-    allocation_style = 1; // Optimistic
+    allocation_style = 1; // Optimistic    todo allocation_style
   }
 
   // The next classes have predefined hard-coded fields offsets
@@ -3313,11 +3313,11 @@ void ClassFileParser::layout_fields(Handle class_loader,
        _class_name == vmSymbols::java_lang_Short() ||
        _class_name == vmSymbols::java_lang_Integer() ||
        _class_name == vmSymbols::java_lang_Long())) {
-    allocation_style = 0;     // Allocate oops first
+    allocation_style = 0;     // Allocate oops first  todo allocation_style
     compact_fields   = false; // Don't compact fields
   }
 
-  // Rearrange fields for a given allocation style
+  // Rearrange fields for a given allocation style  todo allocation_style import-import-import sourcecode
   if( allocation_style == 0 ) {
     // Fields order: oops, longs/doubles, ints, shorts/chars, bytes, padded fields
     next_nonstatic_oop_offset    = next_nonstatic_field_offset;
@@ -3417,9 +3417,9 @@ void ClassFileParser::layout_fields(Handle class_loader,
     next_nonstatic_padded_offset = next_nonstatic_oop_offset + (nonstatic_oop_count * heapOopSize);
   }
 
-  // Iterate over fields again and compute correct offsets.
-  // The field allocation type was temporarily stored in the offset slot.
-  // oop fields are located before non-oop fields (static and non-static).
+  // Iterate over fields again and compute correct offsets. 再次迭代字段并计算正确的偏移量
+  // The field allocation type was temporarily stored in the offset slot.  字段分配类型临时存储在偏移槽中
+  // oop fields are located before non-oop fields (static and non-static). op 字段位于非 oop 字段之前（静态和非静态）
   for (AllFieldStream fs(_fields, _cp); !fs.done(); fs.next()) {
 
     // skip already laid out fields
@@ -3431,25 +3431,25 @@ void ClassFileParser::layout_fields(Handle class_loader,
     int real_offset;
     FieldAllocationType atype = (FieldAllocationType) fs.allocation_type();
 
-    // pack the rest of the fields
+    // pack the rest of the fields  todo 处理静态字段
     switch (atype) {
       case STATIC_OOP:
-        real_offset = next_static_oop_offset;
-        next_static_oop_offset += heapOopSize;
+        real_offset = next_static_oop_offset;  // 开始位置
+        next_static_oop_offset += heapOopSize; // 结束位置
         break;
-      case STATIC_BYTE:
-        real_offset = next_static_byte_offset;
-        next_static_byte_offset += 1;
+      case STATIC_BYTE: // 静态byte
+        real_offset = next_static_byte_offset;  // 开始位置
+        next_static_byte_offset += 1;    // 结束位置+1
         break;
-      case STATIC_SHORT:
+      case STATIC_SHORT:  // 静态short
         real_offset = next_static_short_offset;
-        next_static_short_offset += BytesPerShort;
+        next_static_short_offset += BytesPerShort;  // BytesPerShort globalDefinitions.hpp:88
         break;
-      case STATIC_WORD:
+      case STATIC_WORD:  // 静态word
         real_offset = next_static_word_offset;
-        next_static_word_offset += BytesPerInt;
+        next_static_word_offset += BytesPerInt;  // BytesPerInt globalDefinitions.hpp:89
         break;
-      case STATIC_DOUBLE:
+      case STATIC_DOUBLE:  // 静态double
         real_offset = next_static_double_offset;
         next_static_double_offset += BytesPerLong;
         break;
@@ -3692,7 +3692,7 @@ void ClassFileParser::layout_fields(Handle class_loader,
   info->has_nonstatic_fields = has_nonstatic_fields;
 }
 
-
+// java_lang_Class::create_mirror:4173
 instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
                                                     ClassLoaderData* loader_data,
                                                     Handle protection_domain,
@@ -4036,7 +4036,7 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
     itable_size = access_flags.is_interface() ? 0 : klassItable::compute_itable_size(_transitive_interfaces);
 
     FieldLayoutInfo info;
-    layout_fields(class_loader, &fac, &parsed_annotations, &info, CHECK_NULL);
+    layout_fields(class_loader, &fac, &parsed_annotations, &info, CHECK_NULL); // todo static field
 
     int total_oop_map_size2 =
           InstanceKlass::nonstatic_oop_map_size(info.total_oop_map_count);
@@ -4169,13 +4169,13 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
       }
     }
 
-    // Allocate mirror and initialize static fields
+    // Allocate mirror and initialize static fields  处理  java_lang_Class::create_mirror:572
     java_lang_Class::create_mirror(this_klass, class_loader, protection_domain,
                                    CHECK_(nullHandle));
 
     // Generate any default methods - default methods are interface methods
     // that have a default implementation.  This is new with Lambda project.
-    if (has_default_methods ) {
+    if (has_default_methods ) { // 是否有default函数
       DefaultMethods::generate_default_methods(
           this_klass(), &all_mirandas, CHECK_(nullHandle));
     }

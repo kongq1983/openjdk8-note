@@ -38,7 +38,7 @@ inline ClassLoaderData* ClassLoaderData::class_loader_data(oop loader) {
   return loader_data;
 }
 
-
+// todo add ClassLoaderData
 inline ClassLoaderData *ClassLoaderDataGraph::find_or_create(Handle loader, TRAPS) {
   assert(loader() != NULL,"Must be a class loader");
   // Gets the class loader data out of the java/lang/ClassLoader object, if non-null
@@ -47,5 +47,5 @@ inline ClassLoaderData *ClassLoaderDataGraph::find_or_create(Handle loader, TRAP
   if (loader_data) {
      return loader_data;
   }
-  return ClassLoaderDataGraph::add(loader, false, THREAD);
+  return ClassLoaderDataGraph::add(loader, false, THREAD); // add ClassLoaderData
 }

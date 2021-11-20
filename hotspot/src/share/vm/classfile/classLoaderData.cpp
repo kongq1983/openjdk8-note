@@ -396,7 +396,7 @@ ClassLoaderData::~ClassLoaderData() {
     delete _deallocate_list;
   }
 }
-
+//////////////////////
 /**
  * Returns true if this class loader data is for the extension class loader.
  */

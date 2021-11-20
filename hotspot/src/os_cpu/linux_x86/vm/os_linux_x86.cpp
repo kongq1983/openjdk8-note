@@ -741,14 +741,14 @@ static void current_stack_region(address * bottom, size_t * size) {
   assert(os::current_stack_pointer() >= *bottom &&
          os::current_stack_pointer() < *bottom + *size, "just checking");
 }
-
+// todo stack_base
 address os::current_stack_base() {
   address bottom;
   size_t size;
   current_stack_region(&bottom, &size);
   return (bottom + size);
 }
-
+// todo stack_size
 size_t os::current_stack_size() {
   // stack size includes normal stack and HotSpot guard pages
   address bottom;
