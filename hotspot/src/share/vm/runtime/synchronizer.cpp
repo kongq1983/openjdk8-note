@@ -467,10 +467,10 @@ struct SharedGlobals {
 static SharedGlobals GVars ;
 static int MonitorScavengeThreshold = 1000000 ;
 static volatile int ForceMonitorScavenge = 0 ; // Scavenge required and pending
-
+// todo 锁膨胀
 static markOop ReadStableMark (oop obj) {
   markOop mark = obj->mark() ;
-  if (!mark->is_being_inflated()) {
+  if (!mark->is_being_inflated()) { // 如果没有处于锁膨胀的过程中，则直接返回，锁膨胀是一个非常短暂的中间状态
     return mark ;       // normal fast-path return
   }
 
@@ -478,12 +478,12 @@ static markOop ReadStableMark (oop obj) {
   for (;;) {
     markOop mark = obj->mark() ;
     if (!mark->is_being_inflated()) {
-      return mark ;    // normal fast-path return
+      return mark ;    // normal fast-path return  //如果没有处于锁膨胀的过程中，则直接返回
     }
 
-    // The object is being inflated by some other thread.
-    // The caller of ReadStableMark() must wait for inflation to complete.
-    // Avoid live-lock
+    // The object is being inflated by some other thread.  该对象正在被其他线程膨胀。
+    // The caller of ReadStableMark() must wait for inflation to complete.  ReadStableMark() 的调用者必须等待通胀完成
+    // Avoid live-lock  避免活锁
     // TODO: consider calling SafepointSynchronize::do_call_back() while
     // spinning to see if there's a safepoint pending.  If so, immediately
     // yielding or blocking would be appropriate.  Avoid spinning while
@@ -491,12 +491,12 @@ static markOop ReadStableMark (oop obj) {
     // TODO: add inflation contention performance counters.
     // TODO: restrict the aggregate number of spinners.
 
-    ++its ;
-    if (its > 10000 || !os::is_MP()) {
-       if (its & 1) {
+    ++its ; //如果该对象处于锁膨胀的过程中，则调用方必须等待锁膨胀完成
+    if (its > 10000 || !os::is_MP()) {  //循环超过10000此或者是单核系统
+       if (its & 1) { // 如果是奇数次循环，让当前线程yeild
          os::NakedYield() ;
          TEVENT (Inflate: INFLATING - yield) ;
-       } else {
+       } else { //根据对象地址算出用于表示膨胀锁的指针数组的索引
          // Note that the following code attenuates the livelock problem but is not
          // a complete remedy.  A more complete solution would require that the inflating
          // thread hold the associated inflation lock.  The following code simply restricts
@@ -521,17 +521,17 @@ static markOop ReadStableMark (oop obj) {
            // Beware: NakedYield() is advisory and has almost no effect on some platforms
            // so we periodically call Self->_ParkEvent->park(1).
            // We use a mixed spin/yield/block mechanism.
-           if ((YieldThenBlock++) >= 16) {
-              Thread::current()->_ParkEvent->park(1) ;
-           } else {
-              os::NakedYield() ;
+           if ((YieldThenBlock++) >= 16) {  // 如果还是处于膨胀过程中
+              Thread::current()->_ParkEvent->park(1) ; // 让当前线程park 阻塞
+           } else { // 系统调用运行进程主动让出执行权：sched_yield
+              os::NakedYield() ; // os::YieldResult os::NakedYield() { sched_yield(); return os::YIELD_UNKNOWN ;}
            }
          }
-         Thread::muxRelease (InflationLocks + ix ) ;
+         Thread::muxRelease (InflationLocks + ix ) ;  // 释放膨胀锁
          TEVENT (Inflate: INFLATING - yield/park) ;
        }
     } else {
-       SpinPause() ;       // SMP-polite spinning
+       SpinPause() ;       // SMP-polite spinning   //执行自旋，实际就是直接返回0
     }
   }
 }
@@ -1066,19 +1066,19 @@ ObjectMonitor * ATTR ObjectSynchronizer::omAlloc (Thread * Self) {
     }
 }
 
-// Place "m" on the caller's private per-thread omFreeList.
-// In practice there's no need to clamp or limit the number of
-// monitors on a thread's omFreeList as the only time we'll call
-// omRelease is to return a monitor to the free list after a CAS
-// attempt failed.  This doesn't allow unbounded #s of monitors to
-// accumulate on a thread's free list.
+// Place "m" on the caller's private per-thread omFreeList.  将 "m" 放在调用者的每线程私有 omFreeList 上。
+// In practice there's no need to clamp or limit the number of  在实践中没有必要clamp或限制数量
+// monitors on a thread's omFreeList as the only time we'll call  监视线程的 omFreeList 作为我们将调用的唯一时间
+// omRelease is to return a monitor to the free list after a CAS  omRelease是在一个CAS之后返回一个monitor到空闲列表
+// attempt failed.  This doesn't allow unbounded #s of monitors to  尝试失败。 这不允许无限#s 的监视器
+// accumulate on a thread's free list.   在线程的free list上累积
 //
 
 void ObjectSynchronizer::omRelease (Thread * Self, ObjectMonitor * m, bool fromPerThreadAlloc) {
     guarantee (m->object() == NULL, "invariant") ;
 
     // Remove from omInUseList
-    if (MonitorInUseLists && fromPerThreadAlloc) {
+    if (MonitorInUseLists && fromPerThreadAlloc) {  // onslow传过来是true
       ObjectMonitor* curmidinuse = NULL;
       for (ObjectMonitor* mid = Self->omInUseList; mid != NULL; ) {
        if (m == mid) {
@@ -1258,10 +1258,10 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
           m->OwnerIsThread = 0 ;
           m->_recursions   = 0 ;
           m->_SpinDuration = ObjectMonitor::Knob_SpinLimit ;   // Consider: maintain by type/class
-          // cas设置重量级锁
+          // cas设置重量级锁   0值是暂时的，并且*应该*是短暂的
           markOop cmp = (markOop) Atomic::cmpxchg_ptr (markOopDesc::INFLATING(), object->mark_addr(), mark) ;
           if (cmp != mark) { // 失败
-             omRelease (Self, m, true) ;
+             omRelease (Self, m, true) ; // synchronizer.cpp  ObjectSynchronizer::omRelease:1077
              continue ;       // Interference -- just retry
           }
 

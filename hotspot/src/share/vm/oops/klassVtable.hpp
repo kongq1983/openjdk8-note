@@ -59,7 +59,7 @@ class klassVtable : public ResourceObj {
  public:
   klassVtable(KlassHandle h_klass, void* base, int length) : _klass(h_klass) {
     _tableOffset = (address)base - (address)h_klass(); _length = length;
-  }
+  } // todo _tableOffset表示相对Kclass实例首地址的偏移量   _length表示vtable中存储的vtableEntry数量
 
   // accessors
   vtableEntry* table() const      { return (vtableEntry*)(address(_klass()) + _tableOffset); }

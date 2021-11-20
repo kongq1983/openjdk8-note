@@ -3230,7 +3230,7 @@ void ClassFileParser::layout_fields(Handle class_loader,
   next_static_short_offset    = next_static_word_offset +
                                 ((fac->count[STATIC_WORD]) * BytesPerInt);
   next_static_byte_offset     = next_static_short_offset +
-                                ((fac->count[STATIC_SHORT]) * BytesPerShort);
+                                ((fac->count[STATIC_SHORT]) * BytesPerShort); // todo 最终转成 next_static_byte_offset
 
   int nonstatic_fields_start  = instanceOopDesc::base_offset_in_bytes() +
                                 nonstatic_field_size * heapOopSize;
@@ -3417,9 +3417,9 @@ void ClassFileParser::layout_fields(Handle class_loader,
     next_nonstatic_padded_offset = next_nonstatic_oop_offset + (nonstatic_oop_count * heapOopSize);
   }
 
-  // Iterate over fields again and compute correct offsets.
-  // The field allocation type was temporarily stored in the offset slot.
-  // oop fields are located before non-oop fields (static and non-static).
+  // Iterate over fields again and compute correct offsets. 再次迭代字段并计算正确的偏移量
+  // The field allocation type was temporarily stored in the offset slot.  字段分配类型临时存储在偏移槽中
+  // oop fields are located before non-oop fields (static and non-static). op 字段位于非 oop 字段之前（静态和非静态）
   for (AllFieldStream fs(_fields, _cp); !fs.done(); fs.next()) {
 
     // skip already laid out fields

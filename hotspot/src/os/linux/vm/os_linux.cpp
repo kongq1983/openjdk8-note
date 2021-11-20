@@ -3878,7 +3878,7 @@ bool os::dont_yield() {
 void os::yield() {
   sched_yield();
 }
-
+// todo os::NakedYield()
 os::YieldResult os::NakedYield() { sched_yield(); return os::YIELD_UNKNOWN ;}
 
 void os::yield_all(int attempts) {

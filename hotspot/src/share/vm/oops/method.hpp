@@ -469,7 +469,7 @@ class Method : public Metadata {
     pending_itable_index    = -9,  // itable index will be assigned
     invalid_vtable_index    = -4,  // distinct from any valid vtable index
     garbage_vtable_index    = -3,  // not yet linked; no vtable layout yet
-    nonvirtual_vtable_index = -2   // there is no need for vtable dispatch
+    nonvirtual_vtable_index = -2   // there is no need for vtable dispatch  不需要 vtable 调度
     // 6330203 Note:  Do not use -1, which was overloaded with many meanings.
   };
   DEBUG_ONLY(bool valid_vtable_index() const     { return _vtable_index >= nonvirtual_vtable_index; })

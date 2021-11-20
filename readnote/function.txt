@@ -1,0 +1,12 @@
+
+
+os::NakedYield() = sched_yield();  释放CPU资源
+
+Thread::current()->_ParkEvent->park(1)
+
+// For JSR166. Unpark even if interrupt status already was set
+if (thread->is_Java_thread())
+((JavaThread*)thread)->parker()->unpark();  //java的LockSupport.park
+
+ParkEvent * ev = thread->_ParkEvent ;
+if (ev != NULL) ev->unpark() ;

@@ -121,31 +121,31 @@ int klassVtable::index_of(Method* m, int len) const {
   assert(m->has_vtable_index(), "do not ask this of non-vtable methods");
   return m->vtable_index();
 }
-
-// Copy super class's vtable to the first part (prefix) of this class's vtable,
-// and return the number of entries copied.  Expects that 'super' is the Java
-// super class (arrays can have "array" super classes that must be skipped).
+// todo 复制父类的虚表
+// Copy super class's vtable to the first part (prefix) of this class's vtable,  将超类的虚表复制到该类虚表的第一部分（当前类的虚表前面），
+// and return the number of entries copied.  Expects that 'super' is the Java  并返回复制的条目数。 期望 'super' 是 Java
+// super class (arrays can have "array" super classes that must be skipped).  超类（数组可以有必须跳过的“数组”超类）。
 int klassVtable::initialize_from_super(KlassHandle super) {
-  if (super.is_null()) {
+  if (super.is_null()) { // 父类是null 一般是Object
     return 0;
   } else {
-    // copy methods from superKlass
-    // can't inherit from array class, so must be InstanceKlass
+    // copy methods from superKlass  从 superKlass 复制方法
+    // can't inherit from array class, so must be InstanceKlass  不能从数组类继承，所以必须是InstanceKlass
     assert(super->oop_is_instance(), "must be instance klass");
     InstanceKlass* sk = (InstanceKlass*)super();
-    klassVtable* superVtable = sk->vtable();
+    klassVtable* superVtable = sk->vtable();  // 得到父类的虚表
     assert(superVtable->length() <= _length, "vtable too short");
 #ifdef ASSERT
     superVtable->verify(tty, true);
 #endif
-    superVtable->copy_vtable_to(table());
+    superVtable->copy_vtable_to(table());  // 拷贝到当前类的vtable()
 #ifndef PRODUCT
     if (PrintVtables && Verbose) {
       ResourceMark rm;
       tty->print_cr("copy vtable from %s to %s size %d", sk->internal_name(), klass()->internal_name(), _length);
     }
 #endif
-    return superVtable->length();
+    return superVtable->length();  // 返回父类的vtable数量
   }
 }
 
@@ -174,19 +174,19 @@ void klassVtable::initialize_vtable(bool checkconstraints, TRAPS) {
     return;
   }
 
-  int super_vtable_len = initialize_from_super(super);
-  if (klass()->oop_is_array()) {
+  int super_vtable_len = initialize_from_super(super); // 获得父类的vtable_len  这里面已经把父类的vtable()拷贝到当前类的vtable()
+  if (klass()->oop_is_array()) { // 数组
     assert(super_vtable_len == _length, "arrays shouldn't introduce new methods");
   } else {
     assert(_klass->oop_is_instance(), "must be InstanceKlass");
 
-    Array<Method*>* methods = ik()->methods();
-    int len = methods->length();
-    int initialized = super_vtable_len;
+    Array<Method*>* methods = ik()->methods();  // 获得当前类的方法
+    int len = methods->length();  // 方法的长度
+    int initialized = super_vtable_len;  // 父类的vtable()长度
 
-    // Check each of this class's methods against super;
-    // if override, replace in copy of super vtable, otherwise append to end
-    for (int i = 0; i < len; i++) {
+    // Check each of this class's methods against super;  对照super检查这个类的每个方法
+    // if override, replace in copy of super vtable, otherwise append to end  如果覆盖，则在当前类中父类的vtable中替换覆盖方法，否则追加到结尾
+    for (int i = 0; i < len; i++) {  // 遍历本类方法
       // update_inherited_vtable can stop for gc - ensure using handles
       HandleMark hm(THREAD);
       assert(methods->at(i)->is_method(), "must be a Method*");
@@ -194,14 +194,14 @@ void klassVtable::initialize_vtable(bool checkconstraints, TRAPS) {
 
       bool needs_new_entry = update_inherited_vtable(ik(), mh, super_vtable_len, -1, checkconstraints, CHECK);
 
-      if (needs_new_entry) {
+      if (needs_new_entry) { // 新增
         put_method_at(mh(), initialized);
         mh()->set_vtable_index(initialized); // set primary vtable index
         initialized++;
       }
     }
 
-    // update vtable with default_methods
+    // update vtable with default_methods  修改
     Array<Method*>* default_methods = ik()->default_methods();
     if (default_methods != NULL) {
       len = default_methods->length();
@@ -308,10 +308,10 @@ InstanceKlass* klassVtable::find_transitive_override(InstanceKlass* initialsuper
   return superk;
 }
 
-// Update child's copy of super vtable for overrides
-// OR return true if a new vtable entry is required.
-// Only called for InstanceKlass's, i.e. not for arrays
-// If that changed, could not use _klass as handle for klass
+// Update child's copy of super vtable for overrides  更新 super vtable 的子副本以进行覆盖
+// OR return true if a new vtable entry is required.  如果需要新的 vtable 条目，则返回 true
+// Only called for InstanceKlass's, i.e. not for arrays  只为 InstanceKlass 调用，即不适用于数组
+// If that changed, could not use _klass as handle for klass   如果更改，则不能使用 _klass 作为 klass 的句柄
 bool klassVtable::update_inherited_vtable(InstanceKlass* klass, methodHandle target_method,
                                           int super_vtable_len, int default_index,
                                           bool checkconstraints, TRAPS) {
@@ -322,65 +322,65 @@ bool klassVtable::update_inherited_vtable(InstanceKlass* klass, methodHandle tar
   Array<int>* def_vtable_indices = NULL;
   bool is_default = false;
   // default methods are concrete methods in superinterfaces which are added to the vtable
-  // with their real method_holder
-  // Since vtable and itable indices share the same storage, don't touch
-  // the default method's real vtable/itable index
-  // default_vtable_indices stores the vtable value relative to this inheritor
+  // with their real method_holder  默认方法是添加到虚表的超接口中的具体方法  使用他们真正的 method_holder
+  // Since vtable and itable indices share the same storage, don't touch 由于 vtable 和 itable 索引共享相同的存储，所以不要碰
+  // the default method's real vtable/itable index  默认方法的真实 vtable/itable 索引
+  // default_vtable_indices stores the vtable value relative to this inheritor  default_vtable_indices 存储相对于这个继承者的 vtable 值
   if (default_index >= 0 ) {
-    is_default = true;
+    is_default = true; // default方法
     def_vtable_indices = klass->default_vtable_indices();
     assert(def_vtable_indices != NULL, "def vtable alloc?");
     assert(default_index <= def_vtable_indices->length(), "def vtable len?");
   } else {
     assert(klass == target_method()->method_holder(), "caller resp.");
-    // Initialize the method's vtable index to "nonvirtual".
-    // If we allocate a vtable entry, we will update it to a non-negative number.
+    // Initialize the method's vtable index to "nonvirtual".  将方法的 vtable 索引初始化为“nonvirtual”。
+    // If we allocate a vtable entry, we will update it to a non-negative number. 如果我们分配一个 vtable 条目，我们会将其更新为非负数
     target_method()->set_vtable_index(Method::nonvirtual_vtable_index);
   }
 
-  // Static and <init> methods are never in
-  if (target_method()->is_static() || target_method()->name() ==  vmSymbols::object_initializer_name()) {
+  // Static and <init> methods are never in  静态方法 或者  <init>方法   也就是不需要添加vtableEntry
+  if (target_method()->is_static() || target_method()->name() ==  vmSymbols::object_initializer_name()) { // <init>
     return false;
   }
 
-  if (target_method->is_final_method(klass->access_flags())) {
-    // a final method never needs a new entry; final methods can be statically
-    // resolved and they have to be present in the vtable only if they override
-    // a super's method, in which case they re-use its entry
+  if (target_method->is_final_method(klass->access_flags())) {   // final方法
+    // a final method never needs a new entry; final methods can be statically   final 方法从不需要新条目；
+    // resolved and they have to be present in the vtable only if they override   只有当它们覆盖时它们才必须出现在 vtable 中
+    // a super's method, in which case they re-use its entry                      一个 super 的方法，在这种情况下，他们重用它的入口
     allocate_new = false;
-  } else if (klass->is_interface()) {
+  } else if (klass->is_interface()) {  // klass是接口
     allocate_new = false;  // see note below in needs_new_vtable_entry
-    // An interface never allocates new vtable slots, only inherits old ones.
-    // This method will either be assigned its own itable index later,
-    // or be assigned an inherited vtable index in the loop below.
-    // default methods inherited by classes store their vtable indices
-    // in the inheritor's default_vtable_indices
-    // default methods inherited by interfaces may already have a
-    // valid itable index, if so, don't change it
-    // overpass methods in an interface will be assigned an itable index later
-    // by an inheriting class
+    // An interface never allocates new vtable slots, only inherits old ones.  接口从不分配新的 vtable 插槽，只会继承旧的
+    // This method will either be assigned its own itable index later,  此方法稍后将被分配其自己的 itable 索引，
+    // or be assigned an inherited vtable index in the loop below.      或者在下面的循环中分配一个继承的 vtable 索引
+    // default methods inherited by classes store their vtable indices  类继承的默认方法存储它们的 vtable 索引
+    // in the inheritor's default_vtable_indices                        在继承者的default_vtable_indices
+    // default methods inherited by interfaces may already have a       接口继承的默认方法可能已经有一个
+    // valid itable index, if so, don't change it                       有效的 itable 索引，如果是，不要改变它
+    // overpass methods in an interface will be assigned an itable index later   接口中的 overpass 方法稍后会被分配一个 itable 索引
+    // by an inheriting class                                              通过继承类
     if (!is_default || !target_method()->has_itable_index()) {
       target_method()->set_vtable_index(Method::pending_itable_index);
     }
   }
 
   // we need a new entry if there is no superclass
-  if (klass->super() == NULL) {
+  if (klass->super() == NULL) {  // 没有父类方法
     return allocate_new;
   }
 
-  // private methods in classes always have a new entry in the vtable
-  // specification interpretation since classic has
-  // private methods not overriding
-  // JDK8 adds private methods in interfaces which require invokespecial
-  if (target_method()->is_private()) {
+  // private methods in classes always have a new entry in the vtable   ****类中的私有方法在 vtable 中总是有一个新条目
+  // specification interpretation since classic has  规范解释，因为经典有
+  // private methods not overriding        私有方法没有被覆盖
+  // JDK8 adds private methods in interfaces which require invokespecial   JDK8 在需要 invokespecial 的接口中添加私有方法
+  if (target_method()->is_private()) {  // 私有
     return allocate_new;
   }
 
-  // search through the vtable and update overridden entries
-  // Since check_signature_loaders acquires SystemDictionary_lock
-  // which can block for gc, once we are in this loop, use handles
-  // For classfiles built with >= jdk7, we now look for transitive overrides
+  // search through the vtable and update overridden entries   搜索 vtable 并更新覆盖的条目
+  // Since check_signature_loaders acquires SystemDictionary_lock   由于 check_signature_loaders 获取 SystemDictionary_lock
+  // which can block for gc, once we are in this loop, use handles   可以阻塞 gc，一旦我们进入这个循环，使用句柄
+  // For classfiles built with >= jdk7, we now look for transitive overrides  对于使用 >= jdk7 构建的类文件，我们现在寻找传递覆盖
 
   Symbol* name = target_method()->name();
   Symbol* signature = target_method()->signature();
@@ -394,25 +394,25 @@ bool klassVtable::update_inherited_vtable(InstanceKlass* klass, methodHandle tar
 
   Symbol* target_classname = target_klass->name();
   for(int i = 0; i < super_vtable_len; i++) {
-    Method* super_method = method_at(i);
+    Method* super_method = method_at(i); // 父类从vtable()取出的方法
     // Check if method name matches
     if (super_method->name() == name && super_method->signature() == signature) {
-
+         // 子类覆盖的方法才进入这里的逻辑 (也就是子类和父类同时存在)
       // get super_klass for method_holder for the found method
       InstanceKlass* super_klass =  super_method->method_holder();
 
-      if (is_default
+      if (is_default // 默认方法
           || ((super_klass->is_override(super_method, target_loader, target_classname, THREAD))
           || ((klass->major_version() >= VTABLE_TRANSITIVE_OVERRIDE_VERSION)
           && ((super_klass = find_transitive_override(super_klass,
                              target_method, i, target_loader,
                              target_classname, THREAD))
                              != (InstanceKlass*)NULL))))
-        {
+        {  // 上面已经把private给过滤掉了 所以到这里是没有private
         // Package private methods always need a new entry to root their own
         // overriding. They may also override other methods.
-        if (!target_method()->is_package_private()) {
-          allocate_new = false;
+        if (!target_method()->is_package_private()) { //  判断包访问权限 bool is_package_private() const                { return !is_public() && !is_private() && !is_protected(); }
+          allocate_new = false;  // 非包访问权限 则allocate_new=false (这里只有public和protected)  子类和父类同时存在所以allocate_new = false，也就是不用新的条目
         }
 
         if (checkconstraints) {
@@ -424,7 +424,7 @@ bool klassVtable::update_inherited_vtable(InstanceKlass* klass, methodHandle tar
         // to link to the first super, and we get all the others.
           Handle super_loader(THREAD, super_klass->class_loader());
 
-          if (target_loader() != super_loader()) {
+          if (target_loader() != super_loader()) { // ClassLoader不一样
             ResourceMark rm(THREAD);
             Symbol* failed_type_symbol =
               SystemDictionary::check_signature_loaders(signature, target_loader,
