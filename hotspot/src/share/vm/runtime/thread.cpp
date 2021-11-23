@@ -800,13 +800,13 @@ bool JavaThread::profile_last_Java_frame(frame* _fr) {
   }
   return gotframe;
 }
-
+// todo interrupt
 void Thread::interrupt(Thread* thread) {
   trace("interrupt", thread);
   debug_only(check_for_dangling_thread_pointer(thread);)
   os::interrupt(thread);
 }
-
+// todo interrupted
 bool Thread::is_interrupted(Thread* thread, bool clear_interrupted) {
   trace("is_interrupted", thread);
   debug_only(check_for_dangling_thread_pointer(thread);)

@@ -158,7 +158,7 @@ void exit_globals() {
       // Print the collected safepoint statistics.
       SafepointSynchronize::print_stat_on_exit();
     }
-    if (PrintStringTableStatistics) {
+    if (PrintStringTableStatistics) { // 退出打印
       SymbolTable::dump(tty);
       StringTable::dump(tty);
     }

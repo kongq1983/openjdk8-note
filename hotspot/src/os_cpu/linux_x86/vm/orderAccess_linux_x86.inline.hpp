@@ -51,10 +51,10 @@ inline void OrderAccess::release() {
   // different threads.
   volatile jint local_dummy = 0;
 }
-
+// todo  使用内存屏障
 inline void OrderAccess::fence() {
   if (os::is_MP()) {
-    // always use locked addl since mfence is sometimes expensive
+    // always use locked addl since mfence is sometimes expensive  总是使用locked addl，因为 mfence 有时很昂贵
 #ifdef AMD64
     __asm__ volatile ("lock; addl $0,0(%%rsp)" : : : "cc", "memory");
 #else

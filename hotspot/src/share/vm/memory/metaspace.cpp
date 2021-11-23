@@ -3491,10 +3491,10 @@ MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
 
     return result;
   }
-
+  // enum MetadataType { ClassType,NonClassType,MetadataTypeCount}
   MetadataType mdtype = (type == MetaspaceObj::ClassType) ? ClassType : NonClassType;
 
-  // Try to allocate metadata.
+  // Try to allocate metadata.  Metaspace.allocate
   MetaWord* result = loader_data->metaspace_non_null()->allocate(word_size, mdtype);
 
   if (result == NULL) {

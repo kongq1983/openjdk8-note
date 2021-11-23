@@ -697,7 +697,7 @@ oop StringTable::basic_add(int index_arg, Handle string, jchar* name,
   return string();
 }
 
-
+// todo symbol->as_unicode(length)
 oop StringTable::lookup(Symbol* symbol) {
   ResourceMark rm;
   int length;
@@ -746,7 +746,7 @@ oop StringTable::intern(Handle string_or_null, jchar* name,
 
   Handle string;
   // try to reuse the string if possible
-  if (!string_or_null.is_null()) { // 重用String 重用Handle
+  if (!string_or_null.is_null()) { // todo  重用String 重用Handle 重用 String str = new String(a+b);  str.intern(); //a+b以前不存在，则str==str.intern();
     string = string_or_null;
   } else {
     string = java_lang_String::create_from_unicode(name, len, CHECK_NULL);  // 创建String  name是value
