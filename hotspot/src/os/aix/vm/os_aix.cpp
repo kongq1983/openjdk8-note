@@ -3272,7 +3272,7 @@ bool os::is_interrupted(Thread* thread, bool clear_interrupted) {
   bool interrupted = osthread->interrupted();
 
   if (interrupted && clear_interrupted) {
-    osthread->set_interrupted(false);
+    `osthread->set_interrupted(false);`
     // consider thread->_SleepEvent->reset() ... optional optimization
   }
 

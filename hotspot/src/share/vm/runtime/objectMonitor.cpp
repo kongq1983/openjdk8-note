@@ -1471,7 +1471,7 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
 
    EventJavaMonitorWait event;
 
-   // check for a pending interrupt   调用wait 的时候线程可以被中断
+   // check for a pending interrupt   调用wait 的时候线程可以被中断  osthread->set_interrupted(false);
    if (interruptible && Thread::is_interrupted(Self, true) && !HAS_PENDING_EXCEPTION) {
      // post monitor waited event.  Note that this is past-tense, we are done waiting.
      if (JvmtiExport::should_post_monitor_waited()) {
@@ -1479,13 +1479,13 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
         // wait was not timed out due to thread interrupt.
         JvmtiExport::post_monitor_waited(jt, this, false);
 
-        // In this short circuit of the monitor wait protocol, the
-        // current thread never drops ownership of the monitor and
-        // never gets added to the wait queue so the current thread
-        // cannot be made the successor. This means that the
-        // JVMTI_EVENT_MONITOR_WAITED event handler cannot accidentally
-        // consume an unpark() meant for the ParkEvent associated with
-        // this ObjectMonitor.
+        // In this short circuit of the monitor wait protocol, the 在监视器等待协议的这个短路中，
+        // current thread never drops ownership of the monitor and  当前线程永远不会放弃监视器的所有权，并且
+        // never gets added to the wait queue so the current thread  永远不会被添加到等待队列，所以当前线程
+        // cannot be made the successor. This means that the 不能成为后继者。 这意味着
+        // JVMTI_EVENT_MONITOR_WAITED event handler cannot accidentally JVMTI_EVENT_MONITOR_WAITED 事件处理程序不能意外
+        // consume an unpark() meant for the ParkEvent associated with 消耗一个 unpark() 用于与关联的 ParkEvent
+        // this ObjectMonitor. 这个对象监视器。
      }
      if (event.should_commit()) {
        post_monitor_wait_event(&event, 0, millis, false);
@@ -1501,9 +1501,9 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
    Self->_Stalled = intptr_t(this) ;
    jt->set_current_waiting_monitor(this); // thread.hpp  设置_current_waiting_monitor : ObjectMonitor
 
-   // create a node to be put into the queue
-   // Critically, after we reset() the event but prior to park(), we must check
-   // for a pending interrupt.
+   // create a node to be put into the queue 创建一个要放入队列的节点
+   // Critically, after we reset() the event but prior to park(), we must check 关键的是，在我们 reset() 事件之后但在 park() 之前，我们必须检查
+   // for a pending interrupt. 对于挂起的中断。
    ObjectWaiter node(Self);  //构造节点，封装了当前线程
    node.TState = ObjectWaiter::TS_WAIT ; //节点状态为TS_WAIT
    Self->_ParkEvent->reset() ;
@@ -1526,7 +1526,7 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
    intptr_t save = _recursions; // record the old recursion count
    _waiters++;                  // increment the number of waiters
    _recursions = 0;             // set the recursion level to be 1
-   exit (true, Self) ;                    // exit the monitor 释放锁+唤醒线程------->(2)
+   exit (true, Self) ;                    // todo exit the monitor 释放锁+唤醒线程------->(2)
    guarantee (_owner != Self, "invariant") ;
 
    // The thread is on the WaitSet list - now park() it.
@@ -2327,7 +2327,7 @@ inline void ObjectMonitor::AddWaiter(ObjectWaiter* node) {
   assert(node != NULL, "should not dequeue NULL node");
   assert(node->_prev == NULL, "node already in list");
   assert(node->_next == NULL, "node already in list");
-  // put node at end of queue (circular doubly linked list)
+  // put node at end of queue (circular doubly linked list) 将节点放在队列末尾（循环双向链表）
   if (_WaitSet == NULL) {
     _WaitSet = node;
     node->_prev = node;
@@ -2337,8 +2337,8 @@ inline void ObjectMonitor::AddWaiter(ObjectWaiter* node) {
     ObjectWaiter* tail = head->_prev;
     assert(tail->_next == head, "invariant check");
     tail->_next = node;
-    head->_prev = node;
-    node->_next = head;
+    head->_prev = node; // 第一个和最后1个相连接(循环双向链表)
+    node->_next = head; // 最后1个和第一个相连接(循环双向链表)
     node->_prev = tail;
   }
 }
