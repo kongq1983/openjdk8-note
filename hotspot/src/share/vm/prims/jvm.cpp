@@ -3177,22 +3177,22 @@ JVM_ENTRY(void, JVM_Sleep(JNIEnv* env, jclass threadClass, jlong millis))
   EventThreadSleep event;
 
   if (millis == 0) {
-    // When ConvertSleepToYield is on, this matches the classic VM implementation of
-    // JVM_Sleep. Critical for similar threading behaviour (Win32)
-    // It appears that in certain GUI contexts, it may be beneficial to do a short sleep
+    // When ConvertSleepToYield is on, this matches the classic VM implementation of  当 ConvertSleepToYield 开启时，这匹配经典的 VM 实现
+    // JVM_Sleep. Critical for similar threading behaviour (Win32)  JVM_Sleep。 对类似线程行为至关重要 (Win32)
+    // It appears that in certain GUI contexts, it may be beneficial to do a short sleep  似乎在某些 GUI 上下文中，短暂的睡眠可能是有益的
     // for SOLARIS
-    if (ConvertSleepToYield) {
-      os::yield();
+    if (ConvertSleepToYield) { // define_pd_global(bool, ConvertSleepToYield,      true);  默认true
+      os::yield(); // sleep(0)
     } else {
       ThreadState old_state = thread->osthread()->get_state();
       thread->osthread()->set_state(SLEEPING);
       os::sleep(thread, MinSleepInterval, false);
-      thread->osthread()->set_state(old_state);
+      thread->osthread()->set_state(old_state);  // 恢复状态
     }
   } else {
-    ThreadState old_state = thread->osthread()->get_state();
-    thread->osthread()->set_state(SLEEPING);
-    if (os::sleep(thread, millis, true) == OS_INTRPT) {
+    ThreadState old_state = thread->osthread()->get_state(); // 备份状态
+    thread->osthread()->set_state(SLEEPING); // 设置SLEEPING
+    if (os::sleep(thread, millis, true) == OS_INTRPT) { // 已经被中断了
       // An asynchronous exception (e.g., ThreadDeathException) could have been thrown on
       // us while we were sleeping. We do not overwrite those.
       if (!HAS_PENDING_EXCEPTION) {
@@ -3283,9 +3283,9 @@ JVM_END
 // the hold-time.  A cleaner interface would be to decompose interrupt into
 // two steps.  The 1st phase, performed under Threads_lock, would return
 // a closure that'd be invoked after Threads_lock was dropped.
-// This tactic is safe as PlatformEvent and Parkers are type-stable (TSM) and
-// admit spurious wakeups.
-
+// This tactic is safe as PlatformEvent and Parkers are type-stable (TSM) and  因为 PlatformEvent 和 Parkers 是类型稳定的
+// admit spurious wakeups. 承认虚假唤醒。
+// todo thread.interrupt()
 JVM_ENTRY(void, JVM_Interrupt(JNIEnv* env, jobject jthread))
   JVMWrapper("JVM_Interrupt");
 
@@ -3293,14 +3293,14 @@ JVM_ENTRY(void, JVM_Interrupt(JNIEnv* env, jobject jthread))
   oop java_thread = JNIHandles::resolve_non_null(jthread);
   MutexLockerEx ml(thread->threadObj() == java_thread ? NULL : Threads_lock);
   // We need to re-resolve the java_thread, since a GC might have happened during the
-  // acquire of the lock
+  // acquire of the lock 我们需要重新解析java_thread，因为在这个过程中可能发生了GC获取锁
   JavaThread* thr = java_lang_Thread::thread(JNIHandles::resolve_non_null(jthread));
   if (thr != NULL) {
     Thread::interrupt(thr);
   }
 JVM_END
 
-
+// todo thread.isInterrupted
 JVM_QUICK_ENTRY(jboolean, JVM_IsInterrupted(JNIEnv* env, jobject jthread, jboolean clear_interrupted))
   JVMWrapper("JVM_IsInterrupted");
 

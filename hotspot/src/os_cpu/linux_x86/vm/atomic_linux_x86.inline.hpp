@@ -76,7 +76,7 @@ inline void Atomic::dec    (volatile jint*     dest) {
 inline void Atomic::dec_ptr(volatile void*     dest) {
   dec_ptr((volatile intptr_t*)dest);
 }
-
+// todo Atomic::xchg
 inline jint     Atomic::xchg    (jint     exchange_value, volatile jint*     dest) {
   __asm__ volatile (  "xchgl (%2),%0"
                     : "=r" (exchange_value)

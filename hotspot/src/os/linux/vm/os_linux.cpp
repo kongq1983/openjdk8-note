@@ -3756,12 +3756,12 @@ size_t os::read(int fd, void *buf, unsigned int nBytes) {
 }
 
 // TODO-FIXME: reconcile Solaris' os::sleep with the linux variation.
-// Solaris uses poll(), linux uses park().
-// Poll() is likely a better choice, assuming that Thread.interrupt()
-// generates a SIGUSRx signal. Note that SIGUSR1 can interfere with
+// Solaris uses poll(), linux uses park().  Solaris 使用 poll()，linux 使用 park()。
+// Poll() is likely a better choice, assuming that Thread.interrupt()  Poll() 可能是更好的选择，假设 Thread.interrupt()
+// generates a SIGUSRx signal. Note that SIGUSR1 can interfere with  生成一个 SIGUSRx 信号。 请注意，SIGUSR1 可能会干扰 SIGSEGV，见 4355769。
 // SIGSEGV, see 4355769.
-
-int os::sleep(Thread* thread, jlong millis, bool interruptible) {
+// todo sleep
+int os::sleep(Thread* thread, jlong millis, bool interruptible) { // java thread传过来interruptible=true
   assert(thread == Thread::current(),  "thread consistency check");
 
   ParkEvent * const slp = thread->_SleepEvent ;
@@ -3797,17 +3797,17 @@ int os::sleep(Thread* thread, jlong millis, bool interruptible) {
         JavaThread *jt = (JavaThread *) thread;
         ThreadBlockInVM tbivm(jt);
         OSThreadWaitState osts(jt->osthread(), false /* not Object.wait() */);
-
+        // void set_suspend_equivalent()                  { _suspend_equivalent = true; };
         jt->set_suspend_equivalent();
         // cleared by handle_special_suspend_equivalent_condition() or
         // java_suspend_self() via check_and_wait_while_suspended()
-
+        //   ParkEvent * const slp = thread->_SleepEvent ;
         slp->park(millis);
 
         // were we externally suspended while we were waiting?
         jt->check_and_wait_while_suspended();
       }
-    }
+    } // sleep走上面的逻辑
   } else {
     OSThreadWaitState osts(thread->osthread(), false /* not Object.wait() */);
     jlong prevtime = javaTimeNanos();
@@ -4195,35 +4195,35 @@ void os::interrupt(Thread* thread) {
 
   OSThread* osthread = thread->osthread();
 
-  if (!osthread->interrupted()) {
-    osthread->set_interrupted(true);
-    // More than one thread can get here with the same value of osthread,
-    // resulting in multiple notifications.  We do, however, want the store
-    // to interrupted() to be visible to other threads before we execute unpark().
-    OrderAccess::fence();
+  if (!osthread->interrupted()) { // 未中断
+    osthread->set_interrupted(true); // 设置interrupted标志位
+    // More than one thread can get here with the same value of osthread, 可以有多个线程以相同的 osthread 值到达这里，
+    // resulting in multiple notifications.  We do, however, want the store  导致多个通知。 但是，我们确实想要存储
+    // to interrupted() to be visible to other threads before we execute unpark(). 在我们执行 unpark() 之前，使 interrupted() 对其他线程可见
+    OrderAccess::fence();  // 保证可见性
     ParkEvent * const slp = thread->_SleepEvent ;
-    if (slp != NULL) slp->unpark() ;
+    if (slp != NULL) slp->unpark() ; // 唤醒
   }
 
   // For JSR166. Unpark even if interrupt status already was set
   if (thread->is_Java_thread())
-    ((JavaThread*)thread)->parker()->unpark();
+    ((JavaThread*)thread)->parker()->unpark();  // 唤醒线程
 
   ParkEvent * ev = thread->_ParkEvent ;
-  if (ev != NULL) ev->unpark() ;
+  if (ev != NULL) ev->unpark() ;  // 唤醒线程
 
 }
-
+// todo is_interrupted
 bool os::is_interrupted(Thread* thread, bool clear_interrupted) {
   assert(Thread::current() == thread || Threads_lock->owned_by_self(),
     "possibility of dangling Thread pointer");
 
-  OSThread* osthread = thread->osthread();
+  OSThread* osthread = thread->osthread(); // 获取OSThread
 
   bool interrupted = osthread->interrupted();
 
   if (interrupted && clear_interrupted) {
-    osthread->set_interrupted(false);
+    osthread->set_interrupted(false);  // 清除标记
     // consider thread->_SleepEvent->reset() ... optional optimization
   }
 
@@ -5626,29 +5626,29 @@ int os::PlatformEvent::TryPark() {
 }
 
 void os::PlatformEvent::park() {       // AKA "down()"
-  // Invariant: Only the thread associated with the Event/PlatformEvent
-  // may call park().
+  // Invariant: Only the thread associated with the Event/PlatformEvent 不变：只有与 Event/PlatformEvent 关联的线程
+  // may call park().  可以调用park()。
   // TODO: assert that _Assoc != NULL or _Assoc == Self
   int v ;
   for (;;) {
-      v = _Event ;
-      if (Atomic::cmpxchg (v-1, &_Event, v) == v) break ;
-  }
-  guarantee (v >= 0, "invariant") ;
-  if (v == 0) {
+      v = _Event ; // 初始化_Event=0   _Event  unpark()的时候转换：0 -> -1  1 -> 1  -1 -> 0
+      if (Atomic::cmpxchg (v-1, &_Event, v) == v) break ; // cas递减_event的值
+  } // 第一个的时候_Event=0 减1后=-1  返回v=0
+  guarantee (v >= 0, "invariant") ; // 确保>=0
+  if (v == 0) { // 第一次的时候   减到0  如是v是>0的， 则park()只是把_Event的值-1
      // Do this the hard way by blocking ...
      int status = pthread_mutex_lock(_mutex);
      assert_status(status == 0, status, "mutex_lock");
      guarantee (_nParked == 0, "invariant") ;
-     ++ _nParked ;
-     while (_Event < 0) {
+     ++ _nParked ; // 阻塞线程+1
+     while (_Event < 0) { // 如果递减之后event为-1阻塞，否则立刻返回
         status = pthread_cond_wait(_cond, _mutex);
-        // for some reason, under 2.7 lwp_cond_wait() may return ETIME ...
-        // Treat this the same as if the wait was interrupted
+        // for some reason, under 2.7 lwp_cond_wait() may return ETIME ...  出于某种原因，在 2.7 下 lwp_cond_wait() 可能会返回 ETIME ...
+        // Treat this the same as if the wait was interrupted  把它当作等待被中断一样对待
         if (status == ETIME) { status = EINTR; }
         assert_status(status == 0 || status == EINTR, status, "cond_wait");
      }
-     -- _nParked ;
+     -- _nParked ; // 阻塞线程--
 
     _Event = 0 ;
      status = pthread_mutex_unlock(_mutex);
@@ -5723,29 +5723,29 @@ int os::PlatformEvent::park(jlong millis) {
   OrderAccess::fence();
   return ret;
 }
-
+// todo unpark() 允许多个线程unpark()
 void os::PlatformEvent::unpark() {
-  // Transitions for _Event:
+  // Transitions for _Event:  _Event 的转换：
   //    0 :=> 1
   //    1 :=> 1
-  //   -1 :=> either 0 or 1; must signal target thread
-  //          That is, we can safely transition _Event from -1 to either
-  //          0 or 1. Forcing 1 is slightly more efficient for back-to-back
+  //   -1 :=> either 0 or 1; must signal target thread  -1 :=> 0 或 1; 必须发信号给目标线程
+  //          That is, we can safely transition _Event from -1 to either 也就是说，我们可以安全地将 _Event 从 -1 转换为 0 或 1
+  //          0 or 1. Forcing 1 is slightly more efficient for back-to-back 0 或 1。对于背靠背，强制 1 稍微更有效unpark() 调用。
   //          unpark() calls.
-  // See also: "Semaphores in Plan 9" by Mullender & Cox
+  // See also: "Semaphores in Plan 9" by Mullender & Cox  另见：Mullender & Cox 的“计划 9 中的信号量Semaphores”
   //
-  // Note: Forcing a transition from "-1" to "1" on an unpark() means
-  // that it will take two back-to-back park() calls for the owning
-  // thread to block. This has the benefit of forcing a spurious return
-  // from the first park() call after an unpark() call which will help
-  // shake out uses of park() and unpark() without condition variables.
-
+  // Note: Forcing a transition from "-1" to "1" on an unpark() means  注意：在 unpark() 上强制从“-1”到“1”的转换意味着
+  // that it will take two back-to-back park() calls for the owning  这将需要两个back-to-back park() 调用才能拥有
+  // thread to block. This has the benefit of forcing a spurious return  要阻塞的线程。 这具有强制虚假回报的好处
+  // from the first park() call after an unpark() call which will help  从 unpark() 调用之后的第一个 park() 调用开始，这将有所帮助
+  // shake out uses of park() and unpark() without condition variables. 去掉没有条件变量的park() 和unpark() 的使用。
+  // 直接设置为1    如果原来的_event大于等于0 直接return
   if (Atomic::xchg(1, &_Event) >= 0) return;
 
-  // Wait for the thread associated with the event to vacate
-  int status = pthread_mutex_lock(_mutex);
+  // Wait for the thread associated with the event to vacate  等待与事件关联的线程腾空
+  int status = pthread_mutex_lock(_mutex); // 仅当_event为-1时，即另一个线程阻塞住时，才执行后面的唤醒另一个线程的操作
   assert_status(status == 0, status, "mutex_lock");
-  int AnyWaiters = _nParked;
+  int AnyWaiters = _nParked;  // 阻塞数
   assert(AnyWaiters == 0 || AnyWaiters == 1, "invariant");
   if (AnyWaiters != 0 && WorkAroundNPTLTimedWaitHang) {
     AnyWaiters = 0;
@@ -5858,21 +5858,21 @@ static void unpackTime(timespec* absTime, bool isAbsolute, jlong time) {
 }
 
 void Parker::park(bool isAbsolute, jlong time) {
-  // Ideally we'd do something useful while spinning, such
-  // as calling unpackTime().
+  // Ideally we'd do something useful while spinning, such  理想情况下，我们会在旋转时做一些有用的事情，例如
+  // as calling unpackTime().  作为调用 unpackTime()。
 
-  // Optional fast-path check:
-  // Return immediately if a permit is available.
-  // We depend on Atomic::xchg() having full barrier semantics
-  // since we are doing a lock-free update to _counter.
-  if (Atomic::xchg(0, &_counter) > 0) return; // 如果_counter>0 ，则直接cas设置0
+  // Optional fast-path check:  可选的快速路径检查：
+  // Return immediately if a permit is available.  如果有许可，立即返回。
+  // We depend on Atomic::xchg() having full barrier semantics  我们依赖于具有完整屏障语义的 Atomic::xchg()
+  // since we are doing a lock-free update to _counter.  因为我们正在对 _counter 进行无锁更新。
+  if (Atomic::xchg(0, &_counter) > 0) return; // 把0替换到&_counter 相当于&_counter=0  替换成功  返回原值&_counter 如果>0 则直接返回
 
   Thread* thread = Thread::current();
   assert(thread->is_Java_thread(), "Must be JavaThread");
   JavaThread *jt = (JavaThread *)thread;
 
-  // Optional optimization -- avoid state transitions if there's an interrupt pending.
-  // Check interrupt before trying to wait
+  // Optional optimization -- avoid state transitions if there's an interrupt pending. 可选优化——如果有中断挂起，则避免状态转换
+  // Check interrupt before trying to wait  在尝试等待之前检查中断
   if (Thread::is_interrupted(thread, false)) {
     return;
   }
@@ -5965,7 +5965,7 @@ void Parker::unpark() {
   s = _counter; // 备份的_counter
   _counter = 1;  //直接设置_counter为1
   if (s < 1) {
-    // thread might be parked
+    // thread might be parked  线程可能被parked
     if (_cur_index != -1) { // _cur_index在park()赋值
       // thread is definitely parked
       if (WorkAroundNPTLTimedWaitHang) {
@@ -5974,7 +5974,7 @@ void Parker::unpark() {
         status = pthread_mutex_unlock(_mutex);
         assert (status == 0, "invariant");
       } else {
-        status = pthread_mutex_unlock(_mutex);
+        status = pthread_mutex_unlock(_mutex); // 解锁
         assert (status == 0, "invariant");
         status = pthread_cond_signal (&_cond[_cur_index]); //pthread_cond_signal唤醒在park中等待的线程
         assert (status == 0, "invariant");
@@ -5984,7 +5984,7 @@ void Parker::unpark() {
       assert (status == 0, "invariant") ;
     }
   } else {
-    pthread_mutex_unlock(_mutex); // 目前已经是1了，就直接lock、unlock
+    pthread_mutex_unlock(_mutex); // 目前已经是1了，就直接unlock
     assert (status == 0, "invariant") ;
   }
 }

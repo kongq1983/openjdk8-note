@@ -293,7 +293,7 @@ public:
 class PlatformEvent : public CHeapObj<mtInternal> {
   private:
     double CachePad [4] ;   // increase odds that _mutex is sole occupant of cache line
-    volatile int _Event ;
+    volatile int _Event ;  // todo 关注这个值
     volatile int _nParked ;
     pthread_mutex_t _mutex  [1] ;
     pthread_cond_t  _cond   [1] ;
@@ -310,7 +310,7 @@ class PlatformEvent : public CHeapObj<mtInternal> {
       assert_status(status == 0, status, "cond_init");
       status = pthread_mutex_init (_mutex, NULL);
       assert_status(status == 0, status, "mutex_init");
-      _Event   = 0 ;
+      _Event   = 0 ;   // todo 关注这个值
       _nParked = 0 ;
       _Assoc   = NULL ;
     }
