@@ -5626,29 +5626,29 @@ int os::PlatformEvent::TryPark() {
 }
 
 void os::PlatformEvent::park() {       // AKA "down()"
-  // Invariant: Only the thread associated with the Event/PlatformEvent
-  // may call park().
+  // Invariant: Only the thread associated with the Event/PlatformEvent 不变：只有与 Event/PlatformEvent 关联的线程
+  // may call park().  可以调用park()。
   // TODO: assert that _Assoc != NULL or _Assoc == Self
   int v ;
   for (;;) {
-      v = _Event ;
-      if (Atomic::cmpxchg (v-1, &_Event, v) == v) break ;
-  }
-  guarantee (v >= 0, "invariant") ;
-  if (v == 0) {
+      v = _Event ; // 初始化_Event=0   _Event  unpark()的时候转换：0 -> -1  1 -> 1  -1 -> 0
+      if (Atomic::cmpxchg (v-1, &_Event, v) == v) break ; // cas递减_event的值
+  } // 第一个的时候_Event=0 减1后=-1  返回v=0
+  guarantee (v >= 0, "invariant") ; // 确保>=0
+  if (v == 0) { // 第一次的时候   减到0  如是v是>0的， 则park()只是把_Event的值-1
      // Do this the hard way by blocking ...
      int status = pthread_mutex_lock(_mutex);
      assert_status(status == 0, status, "mutex_lock");
      guarantee (_nParked == 0, "invariant") ;
-     ++ _nParked ;
-     while (_Event < 0) {
+     ++ _nParked ; // 阻塞线程+1
+     while (_Event < 0) { // 如果递减之后event为-1阻塞，否则立刻返回
         status = pthread_cond_wait(_cond, _mutex);
-        // for some reason, under 2.7 lwp_cond_wait() may return ETIME ...
-        // Treat this the same as if the wait was interrupted
+        // for some reason, under 2.7 lwp_cond_wait() may return ETIME ...  出于某种原因，在 2.7 下 lwp_cond_wait() 可能会返回 ETIME ...
+        // Treat this the same as if the wait was interrupted  把它当作等待被中断一样对待
         if (status == ETIME) { status = EINTR; }
         assert_status(status == 0 || status == EINTR, status, "cond_wait");
      }
-     -- _nParked ;
+     -- _nParked ; // 阻塞线程--
 
     _Event = 0 ;
      status = pthread_mutex_unlock(_mutex);
@@ -5723,29 +5723,29 @@ int os::PlatformEvent::park(jlong millis) {
   OrderAccess::fence();
   return ret;
 }
-
+// todo unpark() 允许多个线程unpark()
 void os::PlatformEvent::unpark() {
-  // Transitions for _Event:
+  // Transitions for _Event:  _Event 的转换：
   //    0 :=> 1
   //    1 :=> 1
-  //   -1 :=> either 0 or 1; must signal target thread
-  //          That is, we can safely transition _Event from -1 to either
-  //          0 or 1. Forcing 1 is slightly more efficient for back-to-back
+  //   -1 :=> either 0 or 1; must signal target thread  -1 :=> 0 或 1; 必须发信号给目标线程
+  //          That is, we can safely transition _Event from -1 to either 也就是说，我们可以安全地将 _Event 从 -1 转换为 0 或 1
+  //          0 or 1. Forcing 1 is slightly more efficient for back-to-back 0 或 1。对于背靠背，强制 1 稍微更有效unpark() 调用。
   //          unpark() calls.
-  // See also: "Semaphores in Plan 9" by Mullender & Cox
+  // See also: "Semaphores in Plan 9" by Mullender & Cox  另见：Mullender & Cox 的“计划 9 中的信号量Semaphores”
   //
-  // Note: Forcing a transition from "-1" to "1" on an unpark() means
-  // that it will take two back-to-back park() calls for the owning
-  // thread to block. This has the benefit of forcing a spurious return
-  // from the first park() call after an unpark() call which will help
-  // shake out uses of park() and unpark() without condition variables.
-
+  // Note: Forcing a transition from "-1" to "1" on an unpark() means  注意：在 unpark() 上强制从“-1”到“1”的转换意味着
+  // that it will take two back-to-back park() calls for the owning  这将需要两个back-to-back park() 调用才能拥有
+  // thread to block. This has the benefit of forcing a spurious return  要阻塞的线程。 这具有强制虚假回报的好处
+  // from the first park() call after an unpark() call which will help  从 unpark() 调用之后的第一个 park() 调用开始，这将有所帮助
+  // shake out uses of park() and unpark() without condition variables. 去掉没有条件变量的park() 和unpark() 的使用。
+  // 直接设置为1    如果原来的_event大于等于0 直接return
   if (Atomic::xchg(1, &_Event) >= 0) return;
 
-  // Wait for the thread associated with the event to vacate
-  int status = pthread_mutex_lock(_mutex);
+  // Wait for the thread associated with the event to vacate  等待与事件关联的线程腾空
+  int status = pthread_mutex_lock(_mutex); // 仅当_event为-1时，即另一个线程阻塞住时，才执行后面的唤醒另一个线程的操作
   assert_status(status == 0, status, "mutex_lock");
-  int AnyWaiters = _nParked;
+  int AnyWaiters = _nParked;  // 阻塞数
   assert(AnyWaiters == 0 || AnyWaiters == 1, "invariant");
   if (AnyWaiters != 0 && WorkAroundNPTLTimedWaitHang) {
     AnyWaiters = 0;
