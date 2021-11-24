@@ -1,0 +1,6 @@
+SystemDictionary::String_klass()
+
+=======================================================
+symbolTable.cpp:65
+sym = new (len, THREAD) Symbol(name, len, 1);
+=======================================================

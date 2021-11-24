@@ -70,7 +70,7 @@ Symbol* SymbolTable::allocate_symbol(const u1* name, int len, bool c_heap, TRAPS
   }
   return sym;
 }
-
+// todo
 void SymbolTable::initialize_symbols(int arena_alloc_size) {
   // Initialize the arena for global symbols, size passed in depends on CDS.
   if (arena_alloc_size == 0) {

@@ -61,7 +61,7 @@ void* _ValueObj::operator new(size_t size)    throw() { ShouldNotCallThis(); ret
 void  _ValueObj::operator delete(void* p)             { ShouldNotCallThis(); }
 void* _ValueObj::operator new [](size_t size) throw() { ShouldNotCallThis(); return 0; }
 void  _ValueObj::operator delete [](void* p)          { ShouldNotCallThis(); }
-
+// todo MetaspaceObj
 void* MetaspaceObj::operator new(size_t size, ClassLoaderData* loader_data,
                                  size_t word_size, bool read_only,
                                  MetaspaceObj::Type type, TRAPS) throw() {
