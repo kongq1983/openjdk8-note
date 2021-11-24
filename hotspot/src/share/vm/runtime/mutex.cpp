@@ -446,27 +446,27 @@ inline int Monitor::AcquireOrPush (ParkEvent * ESelf) {
   }
 }
 
-// ILock and IWait are the lowest level primitive internal blocking
-// synchronization functions.  The callers of IWait and ILock must have
-// performed any needed state transitions beforehand.
-// IWait and ILock may directly call park() without any concern for thread state.
-// Note that ILock and IWait do *not* access _owner.
-// _owner is a higher-level logical concept.
-
+// ILock and IWait are the lowest level primitive internal blocking ILock 和 IWait 是最低级别的原始内部阻塞
+// synchronization functions.  The callers of IWait and ILock must have 同步函数。 IWait 和 ILock 的调用者必须有
+// performed any needed state transitions beforehand. 预先执行任何需要的状态转换。
+// IWait and ILock may directly call park() without any concern for thread state. IWait 和 ILock 可以直接调用 park() 而不关心线程状态。
+// Note that ILock and IWait do *not* access _owner. 请注意，ILock 和 IWait *不*访问 _owner。
+// _owner is a higher-level logical concept. _owner 是一个更高层次的逻辑概念。
+// 假设有多条线程同时调用Monitor::ILock，只有一条线程成功执行CAS，将cxq锁的LSB置为1，当其他线程发现竞争后，CAS失败表示发现锁存在竞争，进入竞争逻辑
 void Monitor::ILock (Thread * Self) {
   assert (_OnDeck != Self->_MutexEvent, "invariant") ;
-
+  // 尝试获取cxq锁，如果没加锁（没竞争）则快速加锁并结束
   if (TryFast()) {
  Exeunt:
     assert (ILocked(), "invariant") ;
     return ;
   }
-
+  // 否则有竞争
   ParkEvent * const ESelf = Self->_MutexEvent ;
   assert (_OnDeck != ESelf, "invariant") ;
 
-  // As an optimization, spinners could conditionally try to set ONDECK to _LBIT
-  // Synchronizer.cpp uses a similar optimization.
+  // As an optimization, spinners could conditionally try to set ONDECK to _LBIT 作为优化，微调器可以有条件地尝试将 ONDECK 设置为 _LBIT
+  // Synchronizer.cpp uses a similar optimization. Synchronizer.cpp 使用了类似的优化。
   if (TrySpin (Self)) goto Exeunt ;
 
   // Slow-path - the lock is contended.
@@ -479,31 +479,31 @@ void Monitor::ILock (Thread * Self) {
   if ((NativeMonitorFlags & 32) && CASPTR (&_OnDeck, NULL, UNS(Self)) == 0) {
     goto OnDeck_LOOP ;
   }
-
+  // 尝试获取cxq锁，如果成功则结束，否则将Self线程放入cxq
   if (AcquireOrPush (ESelf)) goto Exeunt ;
 
-  // At any given time there is at most one ondeck thread.
-  // ondeck implies not resident on cxq and not resident on EntryList
-  // Only the OnDeck thread can try to acquire -- contended for -- the lock.
-  // CONSIDER: use Self->OnDeck instead of m->OnDeck.
-  // Deschedule Self so that others may run.
-  while (_OnDeck != ESelf) {
-    ParkCommon (ESelf, 0) ;
+  // At any given time there is at most one ondeck thread. 在任何给定时间，最多有一个 ondeck 线程。
+  // ondeck implies not resident on cxq and not resident on EntryList  ondeck 意味着不驻留在 cxq 上，也不驻留在 EntryList 上
+  // Only the OnDeck thread can try to acquire -- contended for -- the lock. 只有 OnDeck 线程可以尝试获取 -- 争用 -- 锁。
+  // CONSIDER: use Self->OnDeck instead of m->OnDeck. 考虑：使用 Self->OnDeck 而不是 m->OnDeck。
+  // Deschedule Self so that others may run. 调度 Self 以便其他人可以运行。
+  while (_OnDeck != ESelf) { // 任何时刻只有一个线程位于OnDeck，如果Self线程没有位于OnDeck，那么阻塞等待
+    ParkCommon (ESelf, 0) ; // ESelf->park() ;
   }
 
-  // Self is now in the ONDECK position and will remain so until it
-  // manages to acquire the lock.
+  // Self is now in the ONDECK position and will remain so until it Self 现在处于 ONDECK 位置并将保持如此直到它
+  // manages to acquire the lock. 设法获取锁
  OnDeck_LOOP:
-  for (;;) {
+  for (;;) { // 此时Self位于OnDeck，直到获取到锁，否则它一直待在OnDeck
     assert (_OnDeck == ESelf, "invariant") ;
     if (TrySpin (Self)) break ;
-    // CONSIDER: if ESelf->TryPark() && TryLock() break ...
-    // It's probably wise to spin only if we *actually* blocked
-    // CONSIDER: check the lockbyte, if it remains set then
-    // preemptively drain the cxq into the EntryList.
-    // The best place and time to perform queue operations -- lock metadata --
-    // is _before having acquired the outer lock, while waiting for the lock to drop.
-    ParkCommon (ESelf, 0) ;
+    // CONSIDER: if ESelf->TryPark() && TryLock() break ... 考虑：如果 ESelf->TryPark() && TryLock() 中断 ...
+    // It's probably wise to spin only if we *actually* blocked  只有当我们*实际上*被阻止时才旋转可能是明智的
+    // CONSIDER: check the lockbyte, if it remains set then  考虑：检查锁定字节，如果它保持设置然后
+    // preemptively drain the cxq into the EntryList.  抢先将 cxq 排入 EntryList。
+    // The best place and time to perform queue operations -- lock metadata -- 执行队列操作的最佳地点和时间——锁定元数据——
+    // is _before having acquired the outer lock, while waiting for the lock to drop. _before 获取外部锁，同时等待锁删除。
+    ParkCommon (ESelf, 0) ;  // ESelf->park() ;
   }
 
   assert (_OnDeck == ESelf, "invariant") ;
@@ -540,12 +540,12 @@ void Monitor::IUnlock (bool RelaxAssert) {
   // Note that the OrderAccess::storeload() fence that appears after unlock store
   // provides for progress conditions and succession and is _not related to exclusion
   // safety or lock release consistency.
-  OrderAccess::release_store(&_LockWord.Bytes[_LSBINDEX], 0); // drop outer lock
+  OrderAccess::release_store(&_LockWord.Bytes[_LSBINDEX], 0); // drop outer lock // 将LSB置为0，释放cxq锁
 
   OrderAccess::storeload ();
-  ParkEvent * const w = _OnDeck ;
+  ParkEvent * const w = _OnDeck ;  // _OnDeck只有这里设置
   assert (RelaxAssert || w != Thread::current()->_MutexEvent, "invariant") ;
-  if (w != NULL) {
+  if (w != NULL) { // 如果OnDeck不为空，唤醒OnDeck线程
     // Either we have a valid ondeck thread or ondeck is transiently "locked"
     // by some exiting thread as it arranges for succession.  The LSBit of
     // OnDeck allows us to discriminate two cases.  If the latter, the
@@ -559,40 +559,40 @@ void Monitor::IUnlock (bool RelaxAssert) {
     // then progress is known to have occurred as that means the thread associated
     // with "w" acquired the lock.  In that case this thread need take no further
     // action to guarantee progress.
-    if ((UNS(w) & _LBIT) == 0) w->unpark() ;
+    if ((UNS(w) & _LBIT) == 0) w->unpark() ; // 如果OnDeck不为空，唤醒OnDeck线程
     return ;
   }
-
+  //// OnDeck为空，如果cxq和EntryList都为空，没有Unlock的线程，直接退出
   intptr_t cxq = _LockWord.FullWord ;
   if (((cxq & ~_LBIT)|UNS(_EntryList)) == 0) {
     return ;      // normal fast-path exit - cxq and EntryList both empty
   }
-  if (cxq & _LBIT) {
+  if (cxq & _LBIT) { // / 如果在第一行代码（释放cxq）到此处期间有线程获取到锁，那么当前Unlock返回
     // Optional optimization ...
     // Some other thread acquired the lock in the window since this
     // thread released it.  Succession is now that thread's responsibility.
     return ;
   }
 
- Succession:
-  // Slow-path exit - this thread must ensure succession and progress.
-  // OnDeck serves as lock to protect cxq and EntryList.
-  // Only the holder of OnDeck can manipulate EntryList or detach the RATs from cxq.
-  // Avoid ABA - allow multiple concurrent producers (enqueue via push-CAS)
-  // but only one concurrent consumer (detacher of RATs).
-  // Consider protecting this critical section with schedctl on Solaris.
-  // Unlike a normal lock, however, the exiting thread "locks" OnDeck,
-  // picks a successor and marks that thread as OnDeck.  That successor
-  // thread will then clear OnDeck once it eventually acquires the outer lock.
+ Succession: //// 寻找Succession（寻找下一个放到OnDeck做Unlock的线程）
+  // Slow-path exit - this thread must ensure succession and progress. 慢路径退出 - 该线程必须确保连续和进度。
+  // OnDeck serves as lock to protect cxq and EntryList. OnDeck 作为锁来保护 cxq 和 EntryList。
+  // Only the holder of OnDeck can manipulate EntryList or detach the RATs from cxq. 只有 OnDeck 的持有者才能操作 EntryList 或从 cxq 中分离 RAT。
+  // Avoid ABA - allow multiple concurrent producers (enqueue via push-CAS) 避免 ABA - 允许多个并发生产者（通过 push-CAS 入队）
+  // but only one concurrent consumer (detacher of RATs). 但只有一个并发消费者（RAT 分离器）。
+  // Consider protecting this critical section with schedctl on Solaris. 考虑在 Solaris 上使用 schedctl 保护此临界区。
+  // Unlike a normal lock, however, the exiting thread "locks" OnDeck,  然而，与普通锁不同的是，退出线程“锁定”了 OnDeck，
+  // picks a successor and marks that thread as OnDeck.  That successor  选择一个后继线程并将该线程标记为 OnDeck。 那个继任者
+  // thread will then clear OnDeck once it eventually acquires the outer lock. 一旦最终获得外部锁，线程将清除 OnDeck。
   if (CASPTR (&_OnDeck, NULL, _LBIT) != UNS(NULL)) {
     return ;
   }
 
   ParkEvent * List = _EntryList ;
-  if (List != NULL) {
-    // Transfer the head of the EntryList to the OnDeck position.
-    // Once OnDeck, a thread stays OnDeck until it acquires the lock.
-    // For a given lock there is at most OnDeck thread at any one instant.
+  if (List != NULL) { //// 如果EntryList不为空，则将第一个元素从EntryList放入OnDeck
+    // Transfer the head of the EntryList to the OnDeck position. 将 EntryList 的头部转移到 OnDeck 位置。
+    // Once OnDeck, a thread stays OnDeck until it acquires the lock. 一旦 OnDeck，一个线程将保持 OnDeck 直到它获得锁。
+    // For a given lock there is at most OnDeck thread at any one instant. 对于给定的锁，在任何时刻至多有 OnDeck 线程。
    WakeOne:
     assert (List == _EntryList, "invariant") ;
     ParkEvent * const w = List ;
@@ -603,12 +603,12 @@ void Monitor::IUnlock (bool RelaxAssert) {
     _OnDeck = w ;           // pass OnDeck to w.
                             // w will clear OnDeck once it acquires the outer lock
 
-    // Another optional optimization ...
-    // For heavily contended locks it's not uncommon that some other
-    // thread acquired the lock while this thread was arranging succession.
-    // Try to defer the unpark() operation - Delegate the responsibility
-    // for unpark()ing the OnDeck thread to the current or subsequent owners
-    // That is, the new owner is responsible for unparking the OnDeck thread.
+    // Another optional optimization ... 另一个可选的优化...
+    // For heavily contended locks it's not uncommon that some other  对于竞争激烈的锁，其他一些锁并不少见
+    // thread acquired the lock while this thread was arranging succession. 当这个线程正在安排继承时线程获取了锁。
+    // Try to defer the unpark() operation - Delegate the responsibility 尝试推迟 unpark() 操作 - 委派责任
+    // for unpark()ing the OnDeck thread to the current or subsequent owners  用于将 OnDeck 线程解停（）到当前或后续所有者
+    // That is, the new owner is responsible for unparking the OnDeck thread. 也就是说，新的所有者负责释放 OnDeck 线程。
     OrderAccess::storeload() ;
     cxq = _LockWord.FullWord ;
     if (cxq & _LBIT) return ;
@@ -616,15 +616,15 @@ void Monitor::IUnlock (bool RelaxAssert) {
     w->unpark() ;
     return ;
   }
-
+  // / 否则EntryList为空
   cxq = _LockWord.FullWord ;
   if ((cxq & ~_LBIT) != 0) {
-    // The EntryList is empty but the cxq is populated.
-    // drain RATs from cxq into EntryList
-    // Detach RATs segment with CAS and then merge into EntryList
-    for (;;) {
+    // The EntryList is empty but the cxq is populated. EntryList 为空，但填充了 cxq。
+    // drain RATs from cxq into EntryList  将 cxq 中的 RAT 排入 EntryList
+    // Detach RATs segment with CAS and then merge into EntryList 用CAS分离RATs段，然后合并到EntryList
+    for (;;) { // 否则EntryList为空
       // optional optimization - if locked, the owner is responsible for succession
-      if (cxq & _LBIT) goto Punt ;
+      if (cxq & _LBIT) goto Punt ; // 如果从第一行解释代码到此处有其他线程加锁了，则寻找Succession的任务并交给那个线程
       const intptr_t vfy = CASPTR (&_LockWord, cxq, cxq & _LBIT) ;
       if (vfy == cxq) break ;
       cxq = vfy ;
@@ -650,7 +650,7 @@ void Monitor::IUnlock (bool RelaxAssert) {
     // or perhaps sort by thread priority.  See the comments in
     // synchronizer.cpp objectMonitor::exit().
     assert (_EntryList == NULL, "invariant") ;
-    _EntryList = List = (ParkEvent *)(cxq & ~_LBIT) ;
+    _EntryList = List = (ParkEvent *)(cxq & ~_LBIT) ; //否则从cxq拿出线程放入EntryList，然后把那个线程从EntryList拿出放到OnDeck，并唤醒
     assert (List != NULL, "invariant") ;
     goto WakeOne ;
   }
@@ -736,46 +736,46 @@ bool Monitor::notify_all() {
 }
 
 int Monitor::IWait (Thread * Self, jlong timo) {
-  assert (ILocked(), "invariant") ;
+  assert (ILocked(), "invariant") ; /// 执行wait的线程必须已经获得了锁
 
   // Phases:
-  // 1. Enqueue Self on WaitSet - currently prepend
-  // 2. unlock - drop the outer lock
-  // 3. wait for either notification or timeout
-  // 4. lock - reentry - reacquire the outer lock
+  // 1. Enqueue Self on WaitSet - currently prepend  . 在 WaitSet 上将 Self 入队 - 当前处于前置
+  // 2. unlock - drop the outer lock unlock - 解除外锁
+  // 3. wait for either notification or timeout  等待通知或超时
+  // 4. lock - reentry - reacquire the outer lock  lock - 重入 - 重新获取外锁
 
   ParkEvent * const ESelf = Self->_MutexEvent ;
   ESelf->Notified = 0 ;
   ESelf->reset() ;
   OrderAccess::fence() ;
 
-  // Add Self to WaitSet
-  // Ideally only the holder of the outer lock would manipulate the WaitSet -
-  // That is, the outer lock would implicitly protect the WaitSet.
-  // But if a thread in wait() encounters a timeout it will need to dequeue itself
-  // from the WaitSet _before it becomes the owner of the lock.  We need to dequeue
-  // as the ParkEvent -- which serves as a proxy for the thread -- can't reside
-  // on both the WaitSet and the EntryList|cxq at the same time..  That is, a thread
-  // on the WaitSet can't be allowed to compete for the lock until it has managed to
-  // unlink its ParkEvent from WaitSet.  Thus the need for WaitLock.
-  // Contention on the WaitLock is minimal.
+  // Add Self to WaitSet 将 Self 添加到 WaitSet
+  // Ideally only the holder of the outer lock would manipulate the WaitSet -  理想情况下，只有外锁的持有者才能操作 WaitSet -
+  // That is, the outer lock would implicitly protect the WaitSet.  也就是说，外部锁会隐式保护WaitSet。
+  // But if a thread in wait() encounters a timeout it will need to dequeue itself 但是如果 wait() 中的线程遇到超时，它将需要自己出列
+  // from the WaitSet _before it becomes the owner of the lock.  We need to dequeue  从 WaitSet _before 它成为锁的所有者。我们需要出队
+  // as the ParkEvent -- which serves as a proxy for the thread -- can't reside   因为 ParkEvent —— 充当线程的代理 —— 不能驻留
+  // on both the WaitSet and the EntryList|cxq at the same time..  That is, a thread  同时在WaitSet和EntryList|cxq上..也就是一个线程
+  // on the WaitSet can't be allowed to compete for the lock until it has managed to  在 WaitSet 上不能被允许竞争锁，直到它设法
+  // unlink its ParkEvent from WaitSet.  Thus the need for WaitLock.  取消其 ParkEvent 与 WaitSet 的链接。因此需要WaitLock。
+  // Contention on the WaitLock is minimal.  对WaitLock 的争用最小。
   //
-  // Another viable approach would be add another ParkEvent, "WaitEvent" to the
-  // thread class.  The WaitSet would be composed of WaitEvents.  Only the
-  // owner of the outer lock would manipulate the WaitSet.  A thread in wait()
-  // could then compete for the outer lock, and then, if necessary, unlink itself
-  // from the WaitSet only after having acquired the outer lock.  More precisely,
-  // there would be no WaitLock.  A thread in in wait() would enqueue its WaitEvent
-  // on the WaitSet; release the outer lock; wait for either notification or timeout;
-  // reacquire the inner lock; and then, if needed, unlink itself from the WaitSet.
+  // Another viable approach would be add another ParkEvent, "WaitEvent" to the  另一种可行的方法是添加另一个 ParkEvent，“WaitEvent”到
+  // thread class.  The WaitSet would be composed of WaitEvents.  Only the    线程类。 WaitSet 将由 WaitEvents 组成。只有
+  // owner of the outer lock would manipulate the WaitSet.  A thread in wait()   外部锁的所有者将操作 WaitSet。 wait() 中的线程
+  // could then compete for the outer lock, and then, if necessary, unlink itself  然后可以竞争外部锁，然后，如有必要，取消链接自身
+  // from the WaitSet only after having acquired the outer lock.  More precisely,  只有在获得外部锁后才从 WaitSet 中获取。更确切地说，
+  // there would be no WaitLock.  A thread in in wait() would enqueue its WaitEvent 不会有 WaitLock。 wait() 中的线程将其 WaitEvent 入队
+  // on the WaitSet; release the outer lock; wait for either notification or timeout;  在 WaitSet 上；释放外锁；等待通知或超时；
+  // reacquire the inner lock; and then, if needed, unlink itself from the WaitSet.  重新获取内锁；然后，如果需要，从 WaitSet 中取消链接。
   //
-  // Alternatively, a 2nd set of list link fields in the ParkEvent might suffice.
-  // One set would be for the WaitSet and one for the EntryList.
-  // We could also deconstruct the ParkEvent into a "pure" event and add a
-  // new immortal/TSM "ListElement" class that referred to ParkEvents.
-  // In that case we could have one ListElement on the WaitSet and another
-  // on the EntryList, with both referring to the same pure Event.
-
+  // Alternatively, a 2nd set of list link fields in the ParkEvent might suffice.  或者，ParkEvent 中的第二组列表链接字段可能就足够了。
+  // One set would be for the WaitSet and one for the EntryList.  一组用于 WaitSet，一组用于 EntryList。
+  // We could also deconstruct the ParkEvent into a "pure" event and add a  我们也可以将 ParkEvent 解构为一个“纯”事件并添加一个
+  // new immortal/TSM "ListElement" class that referred to ParkEvents.   引用 ParkEvents 的新 immortal/TSM“ListElement”类。
+  // In that case we could have one ListElement on the WaitSet and another 在这种情况下，我们可以在 WaitSet 上有一个 ListElement 和另一个
+  // on the EntryList, with both referring to the same pure Event. 在 EntryList 上，两者都指向同一个纯事件。
+  // 将Self线程加入等待集合
   Thread::muxAcquire (_WaitLock, "wait:WaitLock:Add") ;
   ESelf->ListNext = _WaitSet ;
   _WaitSet = ESelf ;
@@ -790,8 +790,8 @@ int Monitor::IWait (Thread * Self, jlong timo) {
   // and then finds *itself* on the cxq.  During the course of a normal
   // IUnlock() call a thread should _never find itself on the EntryList
   // or cxq, but in the case of wait() it's possible.
-  // See synchronizer.cpp objectMonitor::wait().
-  IUnlock (true) ;
+  // See synchronizer.cpp objectMonitor::wait(). 参见同步器.cpp objectMonitor::wait()。
+  IUnlock (true) ; //// 释放外部的锁（即执行wait前加的锁）
 
   // Wait for either notification or timeout
   // Beware that in some circumstances we might propagate

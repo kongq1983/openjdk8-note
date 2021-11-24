@@ -118,18 +118,18 @@ class Monitor : public CHeapObj<mtInternal> {
   // list element in the unlock()-path.
 
  protected:                              // Monitor-Mutex metadata
-  SplitWord _LockWord ;                  // Contention queue (cxq) colocated with Lock-byte
+  SplitWord _LockWord ;                  // Contention queue (cxq) colocated with Lock-byte  竞争队列（cxq）
   enum LockWordBits { _LBIT=1 } ;
-  Thread * volatile _owner;              // The owner of the lock
+  Thread * volatile _owner;              // The owner of the lock  锁的持有者
                                          // Consider sequestering _owner on its own $line
                                          // to aid future synchronization mechanisms.
-  ParkEvent * volatile _EntryList ;      // List of threads waiting for entry
-  ParkEvent * volatile _OnDeck ;         // heir-presumptive
-  volatile intptr_t _WaitLock [1] ;      // Protects _WaitSet
+  ParkEvent * volatile _EntryList ;      // List of threads waiting for entry  // 等待线程列表
+  ParkEvent * volatile _OnDeck ;         // heir-presumptive 假定继承锁的线程-继承者
+  volatile intptr_t _WaitLock [1] ;      // Protects _WaitSet 保护_WaitSet
   ParkEvent * volatile  _WaitSet ;       // LL of ParkEvents
-  volatile bool     _snuck;              // Used for sneaky locking (evil).
+  volatile bool     _snuck;              // Used for sneaky locking (evil). 用于sneaky locking
   int NotifyCount ;                      // diagnostic assist
-  char _name[MONITOR_NAME_LEN];          // Name of mutex
+  char _name[MONITOR_NAME_LEN];          // Name of mutex 用于sneaky locking
 
   // Debugging fields for naming, deadlock detection, etc. (some only used in debug mode)
 #ifndef PRODUCT

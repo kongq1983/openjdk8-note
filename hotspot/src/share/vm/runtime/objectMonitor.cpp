@@ -1457,8 +1457,8 @@ void ObjectMonitor::post_monitor_wait_event(EventJavaMonitorWait* event,
 // -----------------------------------------------------------------------------
 // Wait/Notify/NotifyAll
 //
-// Note: a subset of changes to ObjectMonitor::wait()
-// will need to be replicated in complete_exit above
+// Note: a subset of changes to ObjectMonitor::wait() 注意：ObjectMonitor::wait() 更改的子集
+// will need to be replicated in complete_exit above 需要在上面的 complete_exit 中复制
 void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
    Thread * const Self = THREAD ;
    assert(Self->is_Java_thread(), "Must be Java thread!");
