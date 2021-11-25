@@ -513,17 +513,17 @@ template <class T> inline void oop_store(T* p, oop v) {
     update_barrier_set((void*)p, v, false /* release */);  // cast away type
   }
 }
-
+// todo cms stab 写屏障
 template <class T> inline void oop_store(volatile T* p, oop v) {
-  update_barrier_set_pre((T*)p, v);   // cast away volatile
+  update_barrier_set_pre((T*)p, v);   // cast away volatile  写前屏障
   // Used by release_obj_field_put, so use release_store_ptr.
-  oopDesc::release_encode_store_heap_oop(p, v);
-  // When using CMS we must mark the card corresponding to p as dirty
-  // with release sematics to prevent that CMS sees the dirty card but
-  // not the new value v at p due to reordering of the two
-  // stores. Note that CMS has a concurrent precleaning phase, where
-  // it reads the card table while the Java threads are running.
-  update_barrier_set((void*)p, v, true /* release */);    // cast away type
+  oopDesc::release_encode_store_heap_oop(p, v); // OrderAccess::release_store_ptr(p, v);  inline void     OrderAccess::release_store_ptr(volatile intptr_t* p, intptr_t v) { *p = v; }
+  // When using CMS we must mark the card corresponding to p as dirty 当使用 CMS 时，我们必须将 p 对应的卡片标记为脏
+  // with release sematics to prevent that CMS sees the dirty card but  使用释放语义来防止 CMS 看到脏卡，但是
+  // not the new value v at p due to reordering of the two  由于两者的重新排序，不是 p 处的新值 v
+  // stores. Note that CMS has a concurrent precleaning phase, where  存储。 请注意，CMS 有一个并发的预清理阶段，其中
+  // it reads the card table while the Java threads are running.  它在 Java 线程运行时读取卡片表。
+  update_barrier_set((void*)p, v, true /* release */);    // cast away type  写后屏障
 }
 
 // Should replace *addr = oop assignments where addr type depends on UseCompressedOops

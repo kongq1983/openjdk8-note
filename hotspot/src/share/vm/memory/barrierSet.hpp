@@ -84,12 +84,12 @@ public:
   // "field" of "bytes" bytes in "obj".
   virtual void read_prim_field(HeapWord* field, size_t bytes) = 0;
 
-  // Invoke the barrier, if any, necessary when writing "new_val" into the
-  // ref field at "offset" in "obj".
-  // (For efficiency reasons, this operation is specialized for certain
-  // barrier types.  Semantically, it should be thought of as a call to the
-  // virtual "_work" function below, which must implement the barrier.)
-  // First the pre-write versions...
+  // Invoke the barrier, if any, necessary when writing "new_val" into the 在将“new_val”写入到
+  // ref field at "offset" in "obj".  "obj" 中 "offset" 处的 ref 字段。
+  // (For efficiency reasons, this operation is specialized for certain  出于效率原因，此操作专门用于某些
+  // barrier types.  Semantically, it should be thought of as a call to the  屏障类型。 从语义上讲，它应该被认为是对
+  // virtual "_work" function below, which must implement the barrier.)  下面的虚拟“_work”函数，必须实现屏障。）
+  // First the pre-write versions...  首先是预写版本...
   template <class T> inline void write_ref_field_pre(T* field, oop new_val);
 private:
   // Keep this private so as to catch violations at build time.

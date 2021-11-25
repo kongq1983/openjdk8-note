@@ -155,16 +155,16 @@ class CardTableModRefBS: public ModRefBarrierSet {
   // against uncommitting the guard region.
   MemRegion committed_unique_to_self(int self, MemRegion mr) const;
 
-  // Mapping from address to card marking array entry
+  // Mapping from address to card marking array entry  todo 卡表算法
   jbyte* byte_for(const void* p) const {
     assert(_whole_heap.contains(p),
            err_msg("Attempt to access p = "PTR_FORMAT" out of bounds of "
                    " card marking array's _whole_heap = ["PTR_FORMAT","PTR_FORMAT")",
                    p2i(p), p2i(_whole_heap.start()), p2i(_whole_heap.end())));
-    jbyte* result = &byte_map_base[uintptr_t(p) >> card_shift];
+    jbyte* result = &byte_map_base[uintptr_t(p) >> card_shift]; // card_shift=9
     assert(result >= _byte_map && result < _byte_map + _byte_map_size,
            "out of bounds accessor for card marking array");
-    return result;
+    return result; // 每片内存=512byte
   }
 
   // The card table byte one after the card marking array
@@ -328,16 +328,16 @@ public:
   }
 
   // *** Card-table-barrier-specific things.
-
+// todo cms 写屏障
   template <class T> inline void inline_write_ref_field_pre(T* field, oop newVal) {}
-
+ // todo cms 写屏障
   template <class T> inline void inline_write_ref_field(T* field, oop newVal, bool release) {
     jbyte* byte = byte_for((void*)field);
     if (release) {
       // Perform a releasing store if requested.
-      OrderAccess::release_store((volatile jbyte*) byte, dirty_card);
+      OrderAccess::release_store((volatile jbyte*) byte, dirty_card); //  标记非脏页
     } else {
-      *byte = dirty_card;
+      *byte = dirty_card; // dirty_card   =  0  标记非脏页
     }
   }
 

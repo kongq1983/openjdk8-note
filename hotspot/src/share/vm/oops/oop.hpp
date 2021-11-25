@@ -65,8 +65,8 @@ class oopDesc {
     narrowKlass _compressed_klass;
   } _metadata; //klass指针
 
-  // Fast access to barrier set.  Must be initialized.
-  static BarrierSet* _bs;
+  // Fast access to barrier set.  Must be initialized. todo oopDesc::bs()
+  static BarrierSet* _bs; // todo static BarrierSet* bs()            { return _bs; }
 
  public:
   markOop  mark() const         { return _mark; }
