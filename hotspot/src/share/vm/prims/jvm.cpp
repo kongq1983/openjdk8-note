@@ -3133,7 +3133,7 @@ JVM_ENTRY(void, JVM_SetThreadPriority(JNIEnv* env, jobject jthread, jint prio))
   }
 JVM_END
 
-
+// todo yield()
 JVM_ENTRY(void, JVM_Yield(JNIEnv *env, jclass threadClass))
   JVMWrapper("JVM_Yield");
   if (os::dont_yield()) return;
@@ -3151,7 +3151,7 @@ JVM_ENTRY(void, JVM_Yield(JNIEnv *env, jclass threadClass))
   }
 JVM_END
 
-
+// todo sleep
 JVM_ENTRY(void, JVM_Sleep(JNIEnv* env, jclass threadClass, jlong millis))
   JVMWrapper("JVM_Sleep");
 
@@ -3192,9 +3192,9 @@ JVM_ENTRY(void, JVM_Sleep(JNIEnv* env, jclass threadClass, jlong millis))
   } else {
     ThreadState old_state = thread->osthread()->get_state(); // 备份状态
     thread->osthread()->set_state(SLEEPING); // 设置SLEEPING
-    if (os::sleep(thread, millis, true) == OS_INTRPT) { // 已经被中断了
-      // An asynchronous exception (e.g., ThreadDeathException) could have been thrown on
-      // us while we were sleeping. We do not overwrite those.
+    if (os::sleep(thread, millis, true) == OS_INTRPT) { // 已经被中断了  这个时候还没休眠
+      // An asynchronous exception (e.g., ThreadDeathException) could have been thrown on 一个异步异常（例如，ThreadDeathException）可能已经被抛出
+      // us while we were sleeping. We do not overwrite those.  我们sleeping时候。  我们不会覆盖这些
       if (!HAS_PENDING_EXCEPTION) {
         if (event.should_commit()) {
           event.set_time(millis);
@@ -3211,7 +3211,7 @@ JVM_ENTRY(void, JVM_Sleep(JNIEnv* env, jclass threadClass, jlong millis))
         THROW_MSG(vmSymbols::java_lang_InterruptedException(), "sleep interrupted");
       }
     }
-    thread->osthread()->set_state(old_state);
+    thread->osthread()->set_state(old_state); // 设置旧的状态
   }
   if (event.should_commit()) {
     event.set_time(millis);

@@ -123,11 +123,11 @@ HeapWord* CollectedHeap::common_mem_allocate_noinit(KlassHandle klass, size_t si
 
   HeapWord* result = NULL;
   if (UseTLAB) { // 是否开启tlab
-    result = allocate_from_tlab(klass, THREAD, size); // tlab分配
+    result = allocate_from_tlab(klass, THREAD, size); // tlab分配  line:179
     if (result != NULL) {
       assert(!HAS_PENDING_EXCEPTION,
              "Unexpected exception, will result in uninitialized storage");
-      return result;
+      return result; // tlab分配成功
     }
   }
   bool gc_overhead_limit_was_exceeded = false; // Universe::heap()这个方法返回的是当前jvm使用的堆类，如果使用G1垃圾回收器，那这里返回的是g1CollectedHeap.cpp
@@ -138,7 +138,7 @@ HeapWord* CollectedHeap::common_mem_allocate_noinit(KlassHandle klass, size_t si
       check_for_non_bad_heap_word_value(result, size));
     assert(!HAS_PENDING_EXCEPTION,
            "Unexpected exception, will result in uninitialized storage");
-    THREAD->incr_allocated_bytes(size * HeapWordSize);
+    THREAD->incr_allocated_bytes(size * HeapWordSize); // void incr_allocated_bytes(jlong size) { _allocated_bytes += size; }
 
     AllocTracer::send_allocation_outside_tlab_event(klass, size * HeapWordSize);
 
@@ -176,16 +176,16 @@ HeapWord* CollectedHeap::common_mem_allocate_init(KlassHandle klass, size_t size
   init_obj(obj, size); // 字段填充
   return obj;
 }
-
+// todo allocate_from_tlab
 HeapWord* CollectedHeap::allocate_from_tlab(KlassHandle klass, Thread* thread, size_t size) {
   assert(UseTLAB, "should use UseTLAB");
-
+  // 快速分配
   HeapWord* obj = thread->tlab().allocate(size); // threadLocalAllocBuffer.inline.hpp : 34
   if (obj != NULL) {
     return obj;
   }
   // Otherwise...
-  return allocate_from_tlab_slow(klass, thread, size);
+  return allocate_from_tlab_slow(klass, thread, size); // collectedHeap.cpp:264
 }
 // 字段填充
 void CollectedHeap::init_obj(HeapWord* obj, size_t size) {

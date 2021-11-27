@@ -56,3 +56,6 @@ ContiguousSpace::par_allocate_impl space:cpp
 jvm内存池： https://blog.csdn.net/y3over/article/details/104203580
 
 jvm 源码: https://blog.csdn.net/FoolishAndStupid/article/details/77822827
+
+jvm文章
+https://www.cmsblogs.com/?p=15628

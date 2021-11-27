@@ -547,7 +547,7 @@ HeapWord* DefNewGeneration::allocate_from_space(size_t size) { // 1. Eden区分�
 HeapWord* DefNewGeneration::expand_and_allocate(size_t size,
                                                 bool   is_tlab,
                                                 bool   parallel) {
-  // We don't attempt to expand the young generation (but perhaps we should.)
+  // We don't attempt to expand the young generation (but perhaps we should.) 我们不试图扩大年轻一代（但也许我们应该这样做。）
   return allocate(size, is_tlab);
 }
 
@@ -1073,7 +1073,7 @@ HeapWord* DefNewGeneration::allocate(size_t word_size,
 // todo par_allocate 分配内存
 HeapWord* DefNewGeneration::par_allocate(size_t word_size,
                                          bool is_tlab) {
-  HeapWord* res = eden()->par_allocate(word_size);
+  HeapWord* res = eden()->par_allocate(word_size); // todo eden分配
   if (CMSEdenChunksRecordAlways && _next_gen != NULL) {
     _next_gen->sample_eden_chunk();
   }

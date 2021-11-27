@@ -278,7 +278,7 @@ class Thread: public ThreadShadow {
 
   // Private thread-local objectmonitor list - a simple cache organized as a SLL.
  public:
-  ObjectMonitor* omFreeList;
+  ObjectMonitor* omFreeList;  // ObjectMonitor 对象  在 omAlloc 方法中会先从 线程私有 的 monitor 集合 omFreeList 中分配对象
   int omFreeCount;                              // length of omFreeList
   int omFreeProvision;                          // reload chunk size
   ObjectMonitor* omInUseList;                   // SLL to track monitors in circulation
@@ -410,10 +410,10 @@ class Thread: public ThreadShadow {
   // Installs a pending exception to be inserted later
   static void send_async_exception(oop thread_oop, oop java_throwable);
 
-  // Resource area
+  // todo Resource area
   ResourceArea* resource_area() const            { return _resource_area; }
   void set_resource_area(ResourceArea* area)     { _resource_area = area; }
-
+  // todo osthread
   OSThread* osthread() const                     { return _osthread;   }
   void set_osthread(OSThread* thread)            { _osthread = thread; }
 
@@ -423,7 +423,7 @@ class Thread: public ThreadShadow {
   JNIHandleBlock* free_handle_block() const      { return _free_handle_block; }
   void set_free_handle_block(JNIHandleBlock* block) { _free_handle_block = block; }
 
-  // Internal handle support
+  // todo Internal handle support
   HandleArea* handle_area() const                { return _handle_area; }
   void set_handle_area(HandleArea* area)         { _handle_area = area; }
 
@@ -433,7 +433,7 @@ class Thread: public ThreadShadow {
   // Thread-Local Allocation Buffer (TLAB) support
   ThreadLocalAllocBuffer& tlab()                 { return _tlab; }
   void initialize_tlab() {
-    if (UseTLAB) { // 是否启用UseTLAB
+    if (UseTLAB) { // todo 是否启用UseTLAB
       tlab().initialize(); // tlab() = ThreadLocalAllocBuffer&
     }
   }
@@ -1745,7 +1745,7 @@ public:
 
   // JSR166 per-thread parker
 private:
-  Parker*    _parker;
+  Parker*    _parker;  // LockSupport.park
 public:
   Parker*     parker() { return _parker; }
 

@@ -52,7 +52,7 @@ inline HeapWord* ThreadLocalAllocBuffer::allocate(size_t size) {
   }
   return NULL;
 }
-
+// todo 重新分配新的tlab
 inline size_t ThreadLocalAllocBuffer::compute_size(size_t obj_size) {
   const size_t aligned_obj_size = align_object_size(obj_size);
 
@@ -61,7 +61,7 @@ inline size_t ThreadLocalAllocBuffer::compute_size(size_t obj_size) {
   // unsafe_max_tlab_alloc is just a hint.
   const size_t available_size = Universe::heap()->unsafe_max_tlab_alloc(myThread()) /
                                                   HeapWordSize;
-  size_t new_tlab_size = MIN2(available_size, desired_size() + aligned_obj_size);
+  size_t new_tlab_size = MIN2(available_size, desired_size() + aligned_obj_size); // 取小的
 
   // Make sure there's enough room for object and filler int[].
   const size_t obj_plus_filler_size = aligned_obj_size + alignment_reserve();
@@ -84,9 +84,9 @@ inline size_t ThreadLocalAllocBuffer::compute_size(size_t obj_size) {
 
 
 void ThreadLocalAllocBuffer::record_slow_allocation(size_t obj_size) {
-  // Raise size required to bypass TLAB next time. Why? Else there's
-  // a risk that a thread that repeatedly allocates objects of one
-  // size will get stuck on this slow path.
+  // Raise size required to bypass TLAB next time. Why? Else there's  增加下次绕过 TLAB 所需的大小。 为什么？ 否则还有
+  // a risk that a thread that repeatedly allocates objects of one  一个线程重复分配一个对象的风险
+  // size will get stuck on this slow path.  size 将卡在这条缓慢的路径上
 
   set_refill_waste_limit(refill_waste_limit() + refill_waste_limit_increment());
 

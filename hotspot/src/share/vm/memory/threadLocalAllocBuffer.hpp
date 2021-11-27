@@ -44,7 +44,7 @@ private:
   HeapWord* _pf_top;                             // allocation prefetch watermark
   HeapWord* _end;                                // allocation end (excluding alignment_reserve)
   size_t    _desired_size;                       // desired size   (including alignment_reserve)
-  size_t    _refill_waste_limit;                 // hold onto tlab if free() is larger than this
+  size_t    _refill_waste_limit;                 // hold onto tlab if free() is larger than this // 如果 free() 大于此值，则保留 tlab
   size_t    _allocated_before_last_gc;           // total bytes allocated up until the last gc
 
   static size_t   _max_size;                     // maximum size of any TLAB
@@ -67,7 +67,7 @@ private:
   void set_pf_top(HeapWord* pf_top)              { _pf_top = pf_top; }
   void set_desired_size(size_t desired_size)     { _desired_size = desired_size; }
   void set_refill_waste_limit(size_t waste)      { _refill_waste_limit = waste;  }
-
+  // todo 初始浪费空间
   size_t initial_refill_waste_limit()            { return desired_size() / TLABRefillWasteFraction; }
 
   static int    target_refills()                 { return _target_refills; }
@@ -118,7 +118,7 @@ public:
   size_t used() const                            { return pointer_delta(top(), start()); }
   size_t used_bytes() const                      { return pointer_delta(top(), start(), 1); }
   size_t free() const                            { return pointer_delta(end(), top()); }
-  // Don't discard tlab if remaining space is larger than this.
+  //todo  Don't discard tlab if remaining space is larger than this.  如果剩余空间大于此值，请不要丢弃 tlab。
   size_t refill_waste_limit() const              { return _refill_waste_limit; }
 
   // Allocate size HeapWords. The memory is NOT initialized to zero.

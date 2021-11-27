@@ -184,53 +184,53 @@ static volatile int InitDone       = 0 ;
 #define TrySpin TrySpin_VaryDuration
 
 // -----------------------------------------------------------------------------
-// Theory of operations -- Monitors lists, thread residency, etc:
+// Theory of operations -- Monitors lists, thread residency, etc: 操作理论——监控列表、线程驻留等：
 //
-// * A thread acquires ownership of a monitor by successfully
-//   CAS()ing the _owner field from null to non-null.
+// * A thread acquires ownership of a monitor by successfully  线程通过成功获取监视器的所有权
+//   CAS()ing the _owner field from null to non-null.   CAS() 将_owner 字段从空值变为非空值。
 //
-// * Invariant: A thread appears on at most one monitor list --
-//   cxq, EntryList or WaitSet -- at any one time.
+// * Invariant: A thread appears on at most one monitor list --  不变：一个线程最多出现在一个监视器列表中——
+//   cxq, EntryList or WaitSet -- at any one time.  cxq、EntryList 或 WaitSet -- 在任何时候。
 //
-// * Contending threads "push" themselves onto the cxq with CAS
-//   and then spin/park.
+// * Contending threads "push" themselves onto the cxq with CAS  竞争线程使用 CAS 将自己“推”到 cxq
+//   and then spin/park.  然后spin旋转/park。
 //
-// * After a contending thread eventually acquires the lock it must
-//   dequeue itself from either the EntryList or the cxq.
+// * After a contending thread eventually acquires the lock it must  在一个竞争线程最终获得它必须的锁之后
+//   dequeue itself from either the EntryList or the cxq.  从 EntryList 或 cxq 中出队。
 //
-// * The exiting thread identifies and unparks an "heir presumptive"
-//   tentative successor thread on the EntryList.  Critically, the
-//   exiting thread doesn't unlink the successor thread from the EntryList.
-//   After having been unparked, the wakee will recontend for ownership of
-//   the monitor.   The successor (wakee) will either acquire the lock or
-//   re-park itself.
+// * The exiting thread identifies and unparks an "heir presumptive"  退出线程识别并解除“继承人推定”
+//   tentative successor thread on the EntryList.  Critically, the  EntryList 上的暂定后继线程。至关重要的是，
+//   exiting thread doesn't unlink the successor thread from the EntryList. 退出线程不会解除后继线程与 EntryList 的链接。
+//   After having been unparked, the wakee will recontend for ownership of 被解锁后，唤醒者将重新争夺所有权
+//   the monitor.   The successor (wakee) will either acquire the lock or 监视器。后继者（唤醒者）将获得锁或
+//   re-park itself.  重新park()。
 //
-//   Succession is provided for by a policy of competitive handoff.
-//   The exiting thread does _not_ grant or pass ownership to the
-//   successor thread.  (This is also referred to as "handoff" succession").
-//   Instead the exiting thread releases ownership and possibly wakes
-//   a successor, so the successor can (re)compete for ownership of the lock.
-//   If the EntryList is empty but the cxq is populated the exiting
-//   thread will drain the cxq into the EntryList.  It does so by
-//   by detaching the cxq (installing null with CAS) and folding
-//   the threads from the cxq into the EntryList.  The EntryList is
-//   doubly linked, while the cxq is singly linked because of the
-//   CAS-based "push" used to enqueue recently arrived threads (RATs).
+//   Succession is provided for by a policy of competitive handoff.  继任由竞争性交接政策提供。
+//   The exiting thread does _not_ grant or pass ownership to the    退出线程_不_授予或将所有权传递给
+//   successor thread.  (This is also referred to as "handoff" succession").  后继线程。 （这也称为“切换”继承）。
+//   Instead the exiting thread releases ownership and possibly wakes              相反，退出线程释放所有权并可能唤醒
+//   a successor, so the successor can (re)compete for ownership of the lock.     后继者，因此后继者可以（重新）竞争锁的所有权。
+//   If the EntryList is empty but the cxq is populated the exiting         如果 EntryList 为空但填充了 cxq，则退出
+//   thread will drain the cxq into the EntryList.  It does so by           线程将 cxq 排入 EntryList。它这样做
+//   by detaching the cxq (installing null with CAS) and folding           通过分离 cxq（使用 CAS 安装 null）并折叠
+//   the threads from the cxq into the EntryList.  The EntryList is        从 cxq 到 EntryList 的线程。条目列表是
+//   doubly linked, while the cxq is singly linked because of the          双向链接，而 cxq 是单链接的，因为
+//   CAS-based "push" used to enqueue recently arrived threads (RATs).     基于 CAS 的“推送”用于将最近到达的线程 (RAT) 排队。
 //
-// * Concurrency invariants:
+// * Concurrency invariants:   并发不变量：
 //
-//   -- only the monitor owner may access or mutate the EntryList.
-//      The mutex property of the monitor itself protects the EntryList
-//      from concurrent interference.
-//   -- Only the monitor owner may detach the cxq.
+//   -- only the monitor owner may access or mutate the EntryList.     只有监视器所有者可以访问或改变 EntryList。
+//      The mutex property of the monitor itself protects the EntryList  监视器本身的互斥属性保护了EntryList
+//      from concurrent interference.                                    来自并发干扰。
+//   -- Only the monitor owner may detach the cxq.                      只有监视器所有者可以分离 cxq
 //
-// * The monitor entry list operations avoid locks, but strictly speaking
-//   they're not lock-free.  Enter is lock-free, exit is not.
+// * The monitor entry list operations avoid locks, but strictly speaking  监视器条目列表操作避免锁，但严格来说
+//   they're not lock-free.  Enter is lock-free, exit is not.                 它们不是无锁的。 Enter 是无锁的，exit 不是。
 //   See http://j2se.east/~dice/PERSIST/040825-LockFreeQueues.html
 //
-// * The cxq can have multiple concurrent "pushers" but only one concurrent
-//   detaching thread.  This mechanism is immune from the ABA corruption.
-//   More precisely, the CAS-based "push" onto cxq is ABA-oblivious.
+// * The cxq can have multiple concurrent "pushers" but only one concurrent  * cxq 可以有多个并发“pushers”，但只有一个并发
+//   detaching thread.  This mechanism is immune from the ABA corruption.       分离线程。这种机制不受 ABA 损坏的影响。
+//   More precisely, the CAS-based "push" onto cxq is ABA-oblivious.         更准确地说，基于 CAS 的“推送”到 cxq 是 ABA 不可见的。
 //
 // * Taken together, the cxq and the EntryList constitute or form a
 //   single logical queue of threads stalled trying to acquire the lock.
@@ -270,24 +270,24 @@ static volatile int InitDone       = 0 ;
 //   manages all RUNNING->BLOCKED and BLOCKED->READY transitions while the
 //   underlying OS manages the READY<->RUN transitions.
 //
-// * Waiting threads reside on the WaitSet list -- wait() puts
-//   the caller onto the WaitSet.
+// * Waiting threads reside on the WaitSet list -- wait() puts 等待线程驻留在 WaitSet 列表中——wait() puts
+//   the caller onto the WaitSet.  调用者到 WaitSet。
 //
-// * notify() or notifyAll() simply transfers threads from the WaitSet to
-//   either the EntryList or cxq.  Subsequent exit() operations will
-//   unpark the notifyee.  Unparking a notifee in notify() is inefficient -
-//   it's likely the notifyee would simply impale itself on the lock held
-//   by the notifier.
+// * notify() or notifyAll() simply transfers threads from the WaitSet to  notify() 或notifyAll() 只是将线程从WaitSet 转移到
+//   either the EntryList or cxq.  Subsequent exit() operations will                EntryList 或 cxq。随后的 exit() 操作将
+//   unpark the notifyee.  Unparking a notifee in notify() is inefficient -       解除通知者的驻留。在 notify() 中取消通知通知的效率低下 -
+//   it's likely the notifyee would simply impale itself on the lock held       被通知者很可能只是在持有的锁上刺穿自己
+//   by the notifier.  通知者。
 //
-// * An interesting alternative is to encode cxq as (List,LockByte) where
-//   the LockByte is 0 iff the monitor is owned.  _owner is simply an auxiliary
-//   variable, like _recursions, in the scheme.  The threads or Events that form
-//   the list would have to be aligned in 256-byte addresses.  A thread would
-//   try to acquire the lock or enqueue itself with CAS, but exiting threads
-//   could use a 1-0 protocol and simply STB to set the LockByte to 0.
-//   Note that is is *not* word-tearing, but it does presume that full-word
-//   CAS operations are coherent with intermix with STB operations.  That's true
-//   on most common processors.
+// * An interesting alternative is to encode cxq as (List,LockByte) where   一个有趣的替代方法是将 cxq 编码为 (List,LockByte) 其中
+//   the LockByte is 0 iff the monitor is owned.  _owner is simply an auxiliary  如果拥有监视器，则 LockByte 为 0。 _owner 只是一个辅助
+//   variable, like _recursions, in the scheme.  The threads or Events that form   变量，如 _recursions，在方案中。形成的线程或事件
+//   the list would have to be aligned in 256-byte addresses.  A thread would   该列表必须按 256 字节地址对齐。一个线程会
+//   try to acquire the lock or enqueue itself with CAS, but exiting threads    尝试使用 CAS 获取锁或将自身排入队列，但退出线程
+//   could use a 1-0 protocol and simply STB to set the LockByte to 0.          可以使用 1-0 协议和简单的 STB 将 LockByte 设置为 0。
+//   Note that is is *not* word-tearing, but it does presume that full-word      请注意，这是 *not* 单词撕裂，但它确实假定完整单词
+//   CAS operations are coherent with intermix with STB operations.  That's true   CAS 操作与 STB 操作的混合是一致的。确实如此
+//   on most common processors.  在最常见的处理器上。
 //
 // * See also http://blogs.sun.com/dave
 
@@ -297,15 +297,15 @@ static volatile int InitDone       = 0 ;
 
 bool ObjectMonitor::try_enter(Thread* THREAD) {
   if (THREAD != _owner) {
-    if (THREAD->is_lock_owned ((address)_owner)) {
+    if (THREAD->is_lock_owned ((address)_owner)) { // 检查_owner是否为当前线程栈上的基本对象锁  如果是true,当前线程持有轻量级锁
        assert(_recursions == 0, "internal state error");
-       _owner = THREAD ;
-       _recursions = 1 ;
+       _owner = THREAD ; // 变为当前线程持有重量级锁
+       _recursions = 1 ; // 重量级锁设置为1 相当于重入次数
        OwnerIsThread = 1 ;
        return true;
     }
     if (Atomic::cmpxchg_ptr (THREAD, &_owner, NULL) != NULL) {
-      return false;
+      return false; // cas失败
     }
     return true;
   } else {
@@ -319,42 +319,42 @@ void ATTR ObjectMonitor::enter(TRAPS) {
   // and to reduce RTS->RTO cache line upgrades on SPARC and IA32 processors.
   Thread * const Self = THREAD ;
   void * cur ;
-
+  // cas抢锁，如果当前线程抢到锁，则直接返回
   cur = Atomic::cmpxchg_ptr (Self, &_owner, NULL) ;
-  if (cur == NULL) {
+  if (cur == NULL) {  // 抢锁成功
      // Either ASSERT _recursions == 0 or explicitly set _recursions = 0.
      assert (_recursions == 0   , "invariant") ;
      assert (_owner      == Self, "invariant") ;
      // CONSIDER: set or assert OwnerIsThread == 1
      return ;
   }
-
-  if (cur == Self) {
+  // 上面cas失败  有可能其他线程(第1次enter)或者当前线程(第2次enter)
+  if (cur == Self) { // 当前线程持有锁
      // TODO-FIXME: check for integer overflow!  BUGID 6557169.
-     _recursions ++ ;
+     _recursions ++ ; // 重入次数+1
      return ;
   }
-
+  //  检查_owner是否为当前线程栈上的基本对象锁  如果是true,当前线程持有轻量级锁
   if (Self->is_lock_owned ((address)cur)) {
     assert (_recursions == 0, "internal state error");
-    _recursions = 1 ;
+    _recursions = 1 ; // 重量级锁设置为1 相当于重入次数
     // Commute owner from a thread-specific on-stack BasicLockObject address to
     // a full-fledged "Thread *".
-    _owner = Self ;
+    _owner = Self ;  // 变为当前线程持有重量级锁
     OwnerIsThread = 1 ;
     return ;
   }
 
   // We've encountered genuine contention.
   assert (Self->_Stalled == 0, "invariant") ;
-  Self->_Stalled = intptr_t(this) ;
+  Self->_Stalled = intptr_t(this) ; // 尝试自旋和其他线程竞争该锁
 
   // Try one round of spinning *before* enqueueing Self
   // and before going through the awkward and expensive state
   // transitions.  The following spin is strictly optional ...
   // Note that if we acquire the monitor from an initial spin
   // we forgo posting JVMTI events and firing DTRACE probes.
-  if (Knob_SpinEarly && TrySpin (Self) > 0) {
+  if (Knob_SpinEarly && TrySpin (Self) > 0) { // TrySpin (Self) > 0
      assert (_owner == Self      , "invariant") ;
      assert (_recursions == 0    , "invariant") ;
      assert (((oop)(object()))->mark() == markOopDesc::encode(this), "invariant") ;
@@ -371,8 +371,8 @@ void ATTR ObjectMonitor::enter(TRAPS) {
   assert (this->object() != NULL  , "invariant") ;
   assert (_count >= 0, "invariant") ;
 
-  // Prevent deflation at STW-time.  See deflate_idle_monitors() and is_busy().
-  // Ensure the object-monitor relationship remains stable while there's contention.
+  // Prevent deflation at STW-time.  See deflate_idle_monitors() and is_busy().  在 STW 时间防止通货紧缩。 参见 deflate_idle_monitors() 和 is_busy()
+  // Ensure the object-monitor relationship remains stable while there's contention. 确保对象-监视器关系在存在争用时保持稳定。
   Atomic::inc_ptr(&_count);
 
   EventJavaMonitorEnter event;
@@ -402,7 +402,7 @@ void ATTR ObjectMonitor::enter(TRAPS) {
       // cleared by handle_special_suspend_equivalent_condition()
       // or java_suspend_self()
 
-      EnterI (THREAD) ;
+      EnterI (THREAD) ; // 改变当前线程状态，使其阻塞在对象锁上
 
       if (!ExitSuspendEquivalent(jt)) break ;
 
@@ -414,7 +414,7 @@ void ATTR ObjectMonitor::enter(TRAPS) {
       //
           _recursions = 0 ;
       _succ = NULL ;
-      exit (false, Self) ;
+      exit (false, Self) ; // 阻塞结束，线程继续运行
 
       jt->java_suspend_self();
     }
@@ -1014,11 +1014,11 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
          // in massive wasteful coherency traffic on classic SMP systems.
          // Instead, I use release_store(), which is implemented as just a simple
          // ST on x64, x86 and SPARC.
-         OrderAccess::release_store_ptr (&_owner, NULL) ;   // drop the lock
+         OrderAccess::release_store_ptr (&_owner, NULL) ;   // drop the lock 将对象锁持有者设置为空
          OrderAccess::storeload() ;                         // See if we need to wake a successor
          if ((intptr_t(_EntryList)|intptr_t(_cxq)) == 0 || _succ != NULL) {
             TEVENT (Inflated exit - simple egress) ;
-            return ;
+            return ; // 如果没有其他线程竞争对象锁，直接返回
          }
          TEVENT (Inflated exit - complex egress) ;
 
@@ -1059,7 +1059,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
          // to reacquire the lock the responsibility for ensuring succession
          // falls to the new owner.
          //
-         if (Atomic::cmpxchg_ptr (THREAD, &_owner, NULL) != NULL) {
+         if (Atomic::cmpxchg_ptr (THREAD, &_owner, NULL) != NULL) { // 失败
             return ;
          }
          TEVENT (Exit - Reacquired) ;
@@ -1084,7 +1084,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
             // B.  If the elements forming the EntryList|cxq are TSM
             //     we could simply unpark() the lead thread and return
             //     without having set _succ.
-            if (Atomic::cmpxchg_ptr (THREAD, &_owner, NULL) != NULL) {
+            if (Atomic::cmpxchg_ptr (THREAD, &_owner, NULL) != NULL) { // 失败
                TEVENT (Inflated exit - reacquired succeeded) ;
                return ;
             }

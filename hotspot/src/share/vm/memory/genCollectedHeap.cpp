@@ -335,7 +335,7 @@ HeapWord* GenCollectedHeap::mem_allocate(size_t size,
                                          bool* gc_overhead_limit_was_exceeded) {
   return collector_policy()->mem_allocate_work(size,
                                                false /* is_tlab */,
-                                               gc_overhead_limit_was_exceeded);
+                                               gc_overhead_limit_was_exceeded);  // 根据策略来分配
 }
 
 bool GenCollectedHeap::must_clear_all_soft_refs() {
@@ -980,7 +980,7 @@ size_t GenCollectedHeap::unsafe_max_tlab_alloc(Thread* thr) const {
   }
   return result;
 }
-
+// todo 分配新的tlab  allocate_new_tlab
 HeapWord* GenCollectedHeap::allocate_new_tlab(size_t size) {
   bool gc_overhead_limit_was_exceeded;
   return collector_policy()->mem_allocate_work(size /* size */,
