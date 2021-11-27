@@ -347,12 +347,12 @@ bool GenCollectedHeap::should_do_concurrent_full_gc(GCCause::Cause cause) {
          ((cause == GCCause::_gc_locker && GCLockerInvokesConcurrent) ||
           (cause == GCCause::_java_lang_system_gc && ExplicitGCInvokesConcurrent));
 }
-
+// todo gc
 void GenCollectedHeap::do_collection(bool  full,
-                                     bool   clear_all_soft_refs,
-                                     size_t size,
+                                     bool   clear_all_soft_refs, // clear_all_soft_refs参数表示是否要回收sort reference
+                                     size_t size, // GC发生是因为发送了"Allocate Fail"，这个size就代表了申请分配的内存大小
                                      bool   is_tlab,
-                                     int    max_level) {
+                                     int    max_level) { // YoungGen或者OldGen
   bool prepared_for_verification = false;
   ResourceMark rm;
   DEBUG_ONLY(Thread* my_thread = Thread::current();)
@@ -382,7 +382,7 @@ void GenCollectedHeap::do_collection(bool  full,
   {
     FlagSetting fl(_is_gc_active, true);
 
-    bool complete = full && (max_level == (n_gens()-1));
+    bool complete = full && (max_level == (n_gens()-1)); // complete表示是否收集整个堆
     const char* gc_cause_prefix = complete ? "Full GC" : "GC";
     gclog_or_tty->date_stamp(PrintGC && PrintGCDateStamps);
     TraceCPUTime tcpu(PrintGCDetails, true, gclog_or_tty);
@@ -397,8 +397,8 @@ void GenCollectedHeap::do_collection(bool  full,
 
     int starting_level = 0;
     if (full) {
-      // Search for the oldest generation which will collect all younger
-      // generations, and start collection loop there.
+      // Search for the oldest generation which will collect all younger  搜索将收集所有年轻一代的最老一代
+      // generations, and start collection loop there.  世代，并从那里开始收集循环。
       for (int i = max_level; i >= 0; i--) {
         if (_gens[i]->full_collects_younger_generations()) {
           starting_level = i;
@@ -431,9 +431,9 @@ void GenCollectedHeap::do_collection(bool  full,
         _gens[i]->stat_record()->invocations++;
         _gens[i]->stat_record()->accumulated_time.start();
 
-        // Must be done anew before each collection because
-        // a previous collection will do mangling and will
-        // change top of some spaces.
+        // Must be done anew before each collection because  必须在每次收集之前重新完成，因为
+        // a previous collection will do mangling and will   前一个集合将进行重整并将
+        // change top of some spaces.   改变一些顶部的一些空间。
         record_gen_tops_before_GC();
 
         if (PrintGC && Verbose) {
@@ -1249,7 +1249,7 @@ class GenGCSaveTopsBeforeGCClosure: public GenCollectedHeap::GenClosure {
     gen->record_spaces_top();
   }
 };
-
+// record_gen_tops_before_GC todo gc
 void GenCollectedHeap::record_gen_tops_before_GC() {
   if (ZapUnusedHeapArea) {
     GenGCSaveTopsBeforeGCClosure blk;
