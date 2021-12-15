@@ -279,7 +279,7 @@ JNIEXPORT jint JNICALL
 JVM_CountStackFrames(JNIEnv *env, jobject thread);
 
 JNIEXPORT void JNICALL
-JVM_Interrupt(JNIEnv *env, jobject thread);
+JVM_Interrupt(JNIEnv *env, jobject thread); // todo interrupt
 
 JNIEXPORT jboolean JNICALL
 JVM_IsInterrupted(JNIEnv *env, jobject thread, jboolean clearInterrupted);

@@ -144,7 +144,7 @@ Parker * Parker::Allocate (JavaThread * t) {
     guarantee (p->AssociatedWith == NULL, "invariant") ;
   } else {
     // Do this the hard way -- materialize a new Parker..
-    p = new Parker() ;
+    p = new Parker() ;  // park()
   }
   p->AssociatedWith = t ;          // Associate p with t
   p->FreeNext       = NULL ;

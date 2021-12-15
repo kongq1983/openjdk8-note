@@ -1680,7 +1680,7 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
      // check for interrupt event, otherwise it is timeout
      if (interruptible && Thread::is_interrupted(Self, true) && !HAS_PENDING_EXCEPTION) {
        TEVENT (Wait - throw IEX from epilog) ;
-       THROW(vmSymbols::java_lang_InterruptedException());
+       THROW(vmSymbols::java_lang_InterruptedException()); // todo 抛异常 java_lang_InterruptedException
      }
    }
 

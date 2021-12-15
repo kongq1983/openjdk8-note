@@ -3160,7 +3160,7 @@ JVM_ENTRY(void, JVM_Sleep(JNIEnv* env, jclass threadClass, jlong millis))
   }
 
   if (Thread::is_interrupted (THREAD, true) && !HAS_PENDING_EXCEPTION) {
-    THROW_MSG(vmSymbols::java_lang_InterruptedException(), "sleep interrupted");
+    THROW_MSG(vmSymbols::java_lang_InterruptedException(), "sleep interrupted"); // todo sleep java_lang_InterruptedException
   }
 
   // Save current thread state and restore it at the end of this block.
@@ -3208,7 +3208,7 @@ JVM_ENTRY(void, JVM_Sleep(JNIEnv* env, jclass threadClass, jlong millis))
 #endif /* USDT2 */
         // TODO-FIXME: THROW_MSG returns which means we will not call set_state()
         // to properly restore the thread state.  That's likely wrong.
-        THROW_MSG(vmSymbols::java_lang_InterruptedException(), "sleep interrupted");
+        THROW_MSG(vmSymbols::java_lang_InterruptedException(), "sleep interrupted"); // todo sleep 抛异常
       }
     }
     thread->osthread()->set_state(old_state); // 设置旧的状态
@@ -3285,7 +3285,7 @@ JVM_END
 // a closure that'd be invoked after Threads_lock was dropped.
 // This tactic is safe as PlatformEvent and Parkers are type-stable (TSM) and  因为 PlatformEvent 和 Parkers 是类型稳定的
 // admit spurious wakeups. 承认虚假唤醒。
-// todo thread.interrupt()
+// todo thread.interrupt()  todo interrupt
 JVM_ENTRY(void, JVM_Interrupt(JNIEnv* env, jobject jthread))
   JVMWrapper("JVM_Interrupt");
 

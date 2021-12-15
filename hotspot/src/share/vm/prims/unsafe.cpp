@@ -1222,7 +1222,7 @@ UNSAFE_ENTRY(jboolean, Unsafe_CompareAndSwapLong(JNIEnv *env, jobject unsafe, jo
     return success;
   }
 UNSAFE_END
-
+// todo park LockSupport.park()
 UNSAFE_ENTRY(void, Unsafe_Park(JNIEnv *env, jobject unsafe, jboolean isAbsolute, jlong time))
   UnsafeWrapper("Unsafe_Park");
   EventThreadPark event;
@@ -1233,7 +1233,7 @@ UNSAFE_ENTRY(void, Unsafe_Park(JNIEnv *env, jobject unsafe, jboolean isAbsolute,
                              (uintptr_t) thread->parker(), (int) isAbsolute, time);
 #endif /* USDT2 */
   JavaThreadParkedState jtps(thread, time != 0);
-  thread->parker()->park(isAbsolute != 0, time); // thread -> Parker->park()
+  thread->parker()->park(isAbsolute != 0, time); // thread -> Parker->park()   LockSupport.park()传入time=0
 #ifndef USDT2
   HS_DTRACE_PROBE1(hotspot, thread__park__end, thread->parker());
 #else /* USDT2 */

@@ -5026,7 +5026,7 @@ void Parker::park(bool isAbsolute, jlong time) {
 
   // Optional optimization -- avoid state transitions if there's an interrupt pending.
   // Check interrupt before trying to wait
-  if (Thread::is_interrupted(thread, false)) {
+  if (Thread::is_interrupted(thread, false)) {  // todo park() 判断是否已经interrupt
     return;
   }
 
