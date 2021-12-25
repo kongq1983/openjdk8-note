@@ -171,7 +171,7 @@ static int Knob_SpinAfterFutile    = 1 ;       // Spin after returning from park
 static int Knob_FixedSpin          = 0 ;
 static int Knob_OState             = 3 ;       // Spinner checks thread state of _owner
 static int Knob_UsePause           = 1 ;
-static int Knob_ExitPolicy         = 0 ;
+static int Knob_ExitPolicy         = 0 ;       //  todo 释放锁默认策略=0
 static int Knob_PreSpin            = 10 ;      // 20-100 likely better
 static int Knob_ResetEvent         = 0 ;
 static int BackOffMask             = 0 ;
@@ -951,7 +951,7 @@ void ObjectMonitor::UnlinkAfterAcquire (Thread * Self, ObjectWaiter * SelfNode)
 // the integral of the # of active timers at any instant over time).
 // Both impinge on OS scalability.  Given that, at most one thread parked on
 // a monitor will use a timer.
-
+// todo 在获取锁时，是将当前线程插入到cxq的头部，而释放锁时，默认策略（Knob_ExitPolicy=0）
 void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
    Thread * Self = THREAD ;
    if (THREAD != _owner) { // 如果当前线程不是Monitor的所有者
@@ -1183,8 +1183,8 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
           // Fall thru into code that tries to wake a successor from EntryList
       }
 
-      w = _EntryList  ;  // 先处理_EntryList
-      if (w != NULL) {
+      w = _EntryList  ;  // 先处理_EntryList  QMode=0 和其他QMode类型 都会进入这里   不会到这里(QMode == 2 && _cxq != NULL)
+      if (w != NULL) {  // _EntryList不为NULL ，先处理_EntryList
           // I'd like to write: guarantee (w->_thread != Self).
           // But in practice an exiting thread may find itself on the EntryList.
           // Lets say thread T1 calls O.wait().  Wait() enqueues T1 on O's waitset and
@@ -1206,8 +1206,8 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
       w = _cxq ; // 再处理_cxq
       if (w == NULL) continue ;
 
-      // Drain _cxq into EntryList - bulk transfer.
-      // First, detach _cxq.
+      // Drain _cxq into EntryList - bulk transfer.  将 _cxq 放入 EntryList
+      // First, detach _cxq. 首先，分离_cxq
       // The following loop is tantamount to: w = swap (&cxq, NULL) 下面的循环相当于： w = swap (&cxq, NULL)
       for (;;) {
           assert (w != NULL, "Invariant") ;
@@ -1270,7 +1270,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
       w = _EntryList  ;
       if (w != NULL) {
           guarantee (w->TState == ObjectWaiter::TS_ENTER, "invariant") ;
-          ExitEpilog (Self, w) ;
+          ExitEpilog (Self, w) ; // 释放锁并唤醒
           return ;
       }
    }
@@ -1349,7 +1349,7 @@ void ObjectMonitor::ExitEpilog (Thread * Self, ObjectWaiter * Wakee) {
    }
 
    DTRACE_MONITOR_PROBE(contended__exit, this, object(), Self);
-   Trigger->unpark() ;
+   Trigger->unpark() ; // 唤醒
 
    // Maintain stats and report events to JVMTI
    if (ObjectMonitor::_sync_Parks != NULL) {
@@ -1548,8 +1548,8 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
 
        if (interruptible && (Thread::is_interrupted(THREAD, false) || HAS_PENDING_EXCEPTION)) {
            // Intentionally empty
-       } else
-       if (node._notified == 0) {  //挂起自己------->(3)   上面一系列判断操作后，当线程确实加入WaitSet时，则使用park方法挂起
+       } else // 比如notifyAll() 只能通知1个
+       if (node._notified == 0) {  //挂起自己------->(3)  没有通知（ 通知的时候 iterator->_notified = 1 ;） 上面一系列判断操作后，当线程确实加入WaitSet时，则使用park方法挂起
          if (millis <= 0) { // todo 重要关注这里
             Self->_ParkEvent->park () ;
          } else { // millis >0 有时间指定
