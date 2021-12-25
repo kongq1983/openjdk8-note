@@ -5014,7 +5014,7 @@ static void unpackTime(timespec* absTime, bool isAbsolute, jlong time) {
 void Parker::park(bool isAbsolute, jlong time) {
   // Optional fast-path check:
   // Return immediately if a permit is available.
-  if (_counter > 0) {
+  if (_counter > 0) { // 先调用unpark()后，直接获得
     _counter = 0;
     OrderAccess::fence();
     return;
@@ -5026,7 +5026,7 @@ void Parker::park(bool isAbsolute, jlong time) {
 
   // Optional optimization -- avoid state transitions if there's an interrupt pending.
   // Check interrupt before trying to wait
-  if (Thread::is_interrupted(thread, false)) {  // todo park() 判断是否已经interrupt
+  if (Thread::is_interrupted(thread, false)) {  // todo park() 判断是否已经interrupt   如果当前线程中断过，现在标记位interrupted=true，则继续调用park()，则不会阻塞，直接这里return
     return;
   }
 

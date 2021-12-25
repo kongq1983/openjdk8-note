@@ -384,7 +384,7 @@ void ObjectSynchronizer::wait(Handle obj, jlong millis, TRAPS) {
     TEVENT (wait - throw IAX) ;
     THROW_MSG(vmSymbols::java_lang_IllegalArgumentException(), "timeout value is negative");
   }
-  ObjectMonitor* monitor = ObjectSynchronizer::inflate(THREAD, obj()); //膨胀为重量级锁
+  ObjectMonitor* monitor = ObjectSynchronizer::inflate(THREAD, obj()); //膨胀为重量级锁 1194
   DTRACE_MONITOR_WAIT_PROBE(monitor, obj(), THREAD, millis);
   monitor->wait(millis, true, THREAD); // ObjectMonitor::wait  调用ObjectMonitor的wait函数
 

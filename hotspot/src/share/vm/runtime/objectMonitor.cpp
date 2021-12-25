@@ -1001,7 +1001,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
       assert (THREAD == _owner, "invariant") ;
 
 
-      if (Knob_ExitPolicy == 0) {
+      if (Knob_ExitPolicy == 0) { // 默认0
          // release semantics: prior loads and stores from within the critical section
          // must not float (reorder) past the following store that drops the lock.
          // On SPARC that requires MEMBAR #loadstore|#storestore.
@@ -1014,7 +1014,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
          // in massive wasteful coherency traffic on classic SMP systems.
          // Instead, I use release_store(), which is implemented as just a simple
          // ST on x64, x86 and SPARC.
-         OrderAccess::release_store_ptr (&_owner, NULL) ;   // drop the lock 将对象锁持有者设置为空
+         OrderAccess::release_store_ptr (&_owner, NULL) ;   // drop the lock 将对象锁持有者设置为空 释放锁
          OrderAccess::storeload() ;                         // See if we need to wake a successor
          if ((intptr_t(_EntryList)|intptr_t(_cxq)) == 0 || _succ != NULL) {
             TEVENT (Inflated exit - simple egress) ;
@@ -1097,7 +1097,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
       guarantee (_owner == THREAD, "invariant") ;
 
       ObjectWaiter * w = NULL ;
-      int QMode = Knob_QMode ;
+      int QMode = Knob_QMode ;  // 默认0  出队策略0 -- 默认策略
 
       if (QMode == 2 && _cxq != NULL) {
           // QMode == 2 : cxq has precedence over EntryList.
@@ -1183,7 +1183,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
           // Fall thru into code that tries to wake a successor from EntryList
       }
 
-      w = _EntryList  ;
+      w = _EntryList  ;  // 先处理_EntryList
       if (w != NULL) {
           // I'd like to write: guarantee (w->_thread != Self).
           // But in practice an exiting thread may find itself on the EntryList.
@@ -1203,12 +1203,12 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
 
       // If we find that both _cxq and EntryList are null then just
       // re-run the exit protocol from the top.
-      w = _cxq ;
+      w = _cxq ; // 再处理_cxq
       if (w == NULL) continue ;
 
       // Drain _cxq into EntryList - bulk transfer.
       // First, detach _cxq.
-      // The following loop is tantamount to: w = swap (&cxq, NULL)
+      // The following loop is tantamount to: w = swap (&cxq, NULL) 下面的循环相当于： w = swap (&cxq, NULL)
       for (;;) {
           assert (w != NULL, "Invariant") ;
           ObjectWaiter * u = (ObjectWaiter *) Atomic::cmpxchg_ptr (NULL, &_cxq, w) ;
@@ -1251,7 +1251,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
          _EntryList = w ;
          ObjectWaiter * q = NULL ;
          ObjectWaiter * p ;
-         for (p = w ; p != NULL ; p = p->_next) {
+         for (p = w ; p != NULL ; p = p->_next) { // 遍历_EntryList
              guarantee (p->TState == ObjectWaiter::TS_CXQ, "Invariant") ;
              p->TState = ObjectWaiter::TS_ENTER ;
              p->_prev = q ;
@@ -1341,7 +1341,7 @@ void ObjectMonitor::ExitEpilog (Thread * Self, ObjectWaiter * Wakee) {
    Wakee  = NULL ;
 
    // Drop the lock
-   OrderAccess::release_store_ptr (&_owner, NULL) ;
+   OrderAccess::release_store_ptr (&_owner, NULL) ;  // 释放锁
    OrderAccess::fence() ;                               // ST _owner vs LD in unpark()
 
    if (SafepointSynchronize::do_call_back()) {
