@@ -699,10 +699,10 @@ inline HeapWord* ContiguousSpace::allocate_impl(size_t size,
   }
 }
 
-// This version is lock-free.
+// This version is lock-free.  todo 统一调用ContiguousSpace (Eden也是调用这个)
 inline HeapWord* ContiguousSpace::par_allocate_impl(size_t size,
                                                     HeapWord* const end_value) {
-  do {
+  do { // cas失败会一直循环
     HeapWord* obj = top();
     if (pointer_delta(end_value, obj) >= size) { // 是否有足够的空间
       HeapWord* new_top = obj + size;

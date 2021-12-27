@@ -247,7 +247,7 @@ protected:
   // Return true if the expansion was successful.
   bool expand(size_t bytes);
 
-  // DefNewGeneration cannot currently expand except at
+  // DefNewGeneration cannot currently expand except at   DefNewGeneration 目前不能扩展，当前无法扩展
   // a GC.
   virtual bool is_maximal_no_gc() const { return true; }
 

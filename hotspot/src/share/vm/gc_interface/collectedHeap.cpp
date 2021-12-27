@@ -260,37 +260,37 @@ void CollectedHeap::check_for_valid_allocation_state() {
   }
 }
 #endif
-
-HeapWord* CollectedHeap::allocate_from_tlab_slow(KlassHandle klass, Thread* thread, size_t size) {
+// https://zhanghaoxin.blog.csdn.net/article/details/113625536
+HeapWord* CollectedHeap::allocate_from_tlab_slow(KlassHandle klass, Thread* thread, size_t size) { // todo tlab分配
 
   // Retain tlab and allocate object in shared space if 保留 tlab 并在共享空间中分配对象，
   // the amount free in the tlab is too large to discard.  如果tlab 中的空闲量太大而无法丢弃。
-  if (thread->tlab().free() > thread->tlab().refill_waste_limit()) {
-    thread->tlab().record_slow_allocation(size);
-    return NULL;
+  if (thread->tlab().free() > thread->tlab().refill_waste_limit()) {  // 如果 free() 大于此值，则保留 tlab
+    thread->tlab().record_slow_allocation(size); //
+    return NULL; // 去tlab外分配
   }
-
+  //  // 当前 TLAB 不够分配，并且剩余空间小于最大浪费空间限制，那么这个 TLAB 会被退回 Eden，重新申请一个新的
   // Discard tlab and allocate a new one.  丢弃 tlab 并分配一个新的
   // To minimize fragmentation, the last TLAB may be smaller than the rest.  为了尽量减少碎片，最后一个 TLAB 可能比其余的小
-  size_t new_tlab_size = thread->tlab().compute_size(size);
-
+  size_t new_tlab_size = thread->tlab().compute_size(size); //为了避免内存碎片化，新分配的TLAB会比之前分配的更小，compute_size就是计算待分配的TLAB的大小，如果返回0说明Eden区内存不足
+  // 清除以前分配的的tlab内存     compute_size : threadLocalAllocBuffer.inline.hpp:55
   thread->tlab().clear_before_allocation();
 
   if (new_tlab_size == 0) {
-    return NULL;
+    return NULL; // 去tlab外分配
   }
 
   // Allocate a new TLAB...   分配1个新的TLAB
-  HeapWord* obj = Universe::heap()->allocate_new_tlab(new_tlab_size);
+  HeapWord* obj = Universe::heap()->allocate_new_tlab(new_tlab_size); // genCollectedHeap.cpp:983    g1CollectedHeap.cpp:837
   if (obj == NULL) {
-    return NULL;
+    return NULL; // 去tlab外分配
   }
 
   AllocTracer::send_allocation_in_new_tlab_event(klass, new_tlab_size * HeapWordSize, size * HeapWordSize);
 
   if (ZeroTLAB) {
     // ..and clear it.
-    Copy::zero_to_words(obj, new_tlab_size);
+    Copy::zero_to_words(obj, new_tlab_size); // 清0处理
   } else {
     // ...and zap just allocated object.
 #ifdef ASSERT
@@ -301,7 +301,7 @@ HeapWord* CollectedHeap::allocate_from_tlab_slow(KlassHandle klass, Thread* thre
     Copy::fill_to_words(obj + hdr_size, new_tlab_size - hdr_size, badHeapWordVal);
 #endif // ASSERT
   }
-  thread->tlab().fill(obj, obj + size, new_tlab_size);
+  thread->tlab().fill(obj, obj + size, new_tlab_size); // 数据填充
   return obj;
 }
 

@@ -547,7 +547,7 @@ HeapWord* DefNewGeneration::allocate_from_space(size_t size) { // 1. Eden区分�
 HeapWord* DefNewGeneration::expand_and_allocate(size_t size,
                                                 bool   is_tlab,
                                                 bool   parallel) {
-  // We don't attempt to expand the young generation (but perhaps we should.)
+  // We don't attempt to expand the young generation (but perhaps we should.) 我们不试图扩大年轻一代（但也许我们应该这样做。）
   return allocate(size, is_tlab);
 }
 
@@ -556,7 +556,7 @@ void DefNewGeneration::adjust_desired_tenuring_threshold() {
   _tenuring_threshold =
     age_table()->compute_tenuring_threshold(to()->capacity()/HeapWordSize);
 }
-
+// todo gc 新生代回收
 void DefNewGeneration::collect(bool   full,
                                bool   clear_all_soft_refs,
                                size_t size,
@@ -568,16 +568,16 @@ void DefNewGeneration::collect(bool   full,
   _gc_timer->register_gc_start();
   DefNewTracer gc_tracer;
   gc_tracer.report_gc_start(gch->gc_cause(), _gc_timer->gc_start());
-
+  // 第一个是新生代
   _next_gen = gch->next_gen(this);
 
-  // If the next generation is too full to accommodate promotion
-  // from this generation, pass on collection; let the next generation
-  // do it.
-  if (!collection_attempt_is_safe()) {
+  // If the next generation is too full to accommodate promotion       如果下一代太满无法容纳提升
+  // from this generation, pass on collection; let the next generation  从这一代开始，传递集合； 让下一代去做
+  // do it. 检查回收当前内存代的垃圾对象是否安全,若不安全则放弃回收该内存代,并通知内存堆管理器关闭当前的增量式垃圾回收方式
+  if (!collection_attempt_is_safe()) { // 895   todo gc DefNewGeneration正式进行Gc前会先检测一下本次Minor Gc是否安全,如果不安全则直接放弃本次Gc,检查策略是 1. To区空闲  2. 下一个内存代的可用空间能够容纳当前内存代的所有对象(用于对象升级)
     if (Verbose && PrintGCDetails) {
       gclog_or_tty->print(" :: Collection attempt not safe :: ");
-    }
+    } // /告诉内存堆管理器不要再考虑增量式GC(Minor Gc),因为一定会失败
     gch->set_incremental_collection_failed(); // Slight lie: we did not even attempt one
     return;
   }
@@ -587,7 +587,7 @@ void DefNewGeneration::collect(bool   full,
 
   GCTraceTime t1(GCCauseString("GC", gch->gc_cause()), PrintGC && !PrintGCDetails, true, NULL, gc_tracer.gc_id());
   // Capture heap used before collection (for printing).
-  size_t gch_prev_used = gch->used();
+  size_t gch_prev_used = gch->used(); // //记录该GC之前,内存堆的使用量
 
   gch->trace_heap_before_gc(&gc_tracer);
 
@@ -601,7 +601,7 @@ void DefNewGeneration::collect(bool   full,
   to()->clear(SpaceDecorator::Mangle);
 
   gch->rem_set()->prepare_for_younger_refs_iterate(false);
-
+  // //标记所有内存代当前分配对象存储空间的起始位置
   assert(gch->no_allocs_since_save_marks(0),
          "save marks have not been newly set.");
 
@@ -618,13 +618,13 @@ void DefNewGeneration::collect(bool   full,
                                            false);
 
   set_promo_failure_scan_stack_closure(&fsc_with_no_gc_barrier);
-  FastEvacuateFollowersClosure evacuate_followers(gch, _level, this,
+  FastEvacuateFollowersClosure evacuate_followers(gch, _level, this, // //用于分析对象的引用关系并进行回收
                                                   &fsc_with_no_gc_barrier,
                                                   &fsc_with_gc_barrier);
-
+  // //标记所有内存代当前分配对象存储空间的起始位置
   assert(gch->no_allocs_since_save_marks(0),
          "save marks have not been newly set.");
-
+  // todo 遍历当前内存代上的所有根对象,并复制它们到新的存储空间
   gch->gen_process_roots(_level,
                          true,  // Process younger gens, if any,
                                 // as strong roots.
@@ -635,10 +635,10 @@ void DefNewGeneration::collect(bool   full,
                          &fsc_with_gc_barrier,
                          &cld_scan_closure);
 
-  // "evacuate followers".
+  // "evacuate followers". //迭代递归遍历当前内存代上的所有根对象的引用对象,并进行垃圾回收(复制active对象到新的存储空间)
   evacuate_followers.do_void();
 
-  FastKeepAliveClosure keep_alive(this, &scan_weak_ref);
+  FastKeepAliveClosure keep_alive(this, &scan_weak_ref); // 清理软引用对象
   ReferenceProcessor* rp = ref_processor();
   rp->setup_policy(clear_all_soft_refs);
   const ReferenceProcessorStats& stats =
@@ -646,8 +646,8 @@ void DefNewGeneration::collect(bool   full,
                                     NULL, _gc_timer, gc_tracer.gc_id());
   gc_tracer.report_gc_reference_stats(stats);
 
-  if (!_promotion_failed) {
-    // Swap the survivor spaces.
+  if (!_promotion_failed) { // 当前内存代(年青代)在本次Gc过程中没有发生对象升级失败
+    // Swap the survivor spaces. SpaceDecorator::Mangle  Eden/From区清零
     eden()->clear(SpaceDecorator::Mangle);
     from()->clear(SpaceDecorator::Mangle);
     if (ZapUnusedHeapArea) {
@@ -660,11 +660,11 @@ void DefNewGeneration::collect(bool   full,
       // other spaces.
       to()->mangle_unused_area();
     }
-    swap_spaces();
+    swap_spaces(); //交换From/To区
 
     assert(to()->is_empty(), "to space should be empty now");
 
-    adjust_desired_tenuring_threshold();
+    adjust_desired_tenuring_threshold(); // 重新计算对象可进入下一个内存代的存活时间阈值
 
     // A successful scavenge should restart the GC time limit count which is
     // for full GC's.
@@ -674,7 +674,7 @@ void DefNewGeneration::collect(bool   full,
       gch->print_heap_change(gch_prev_used);
     }
     assert(!gch->incremental_collection_failed(), "Should be clear");
-  } else {
+  } else { //当前内存代(年青代)在本次Gc过程中发生了对象升级失败(年老代没有足够的空闲空间来容纳从年青代转存储过来的active对象)
     assert(_promo_failure_scan_stack.is_empty(), "post condition");
     _promo_failure_scan_stack.clear(true); // Clear cached segments.
 
@@ -688,11 +688,11 @@ void DefNewGeneration::collect(bool   full,
     // as a result of a partial evacuation of eden
     // and from-space.
     swap_spaces();   // For uniformity wrt ParNewGeneration.
-    from()->set_next_compaction_space(to());
+    from()->set_next_compaction_space(to()); // 设置From区下一个可压缩内存区为To区,以便在下一次的Full Gc中压缩调整
     gch->set_incremental_collection_failed();
 
     // Inform the next generation that a promotion failure occurred.
-    _next_gen->promotion_failure_occurred();
+    _next_gen->promotion_failure_occurred();  // 通知老生代发生了对象升级失败(你的空闲空间不够)
     gc_tracer.report_promotion_failed(_promotion_failed_info);
 
     // Reset the PromotionFailureALot counters.
@@ -891,9 +891,9 @@ void DefNewGeneration::reset_scratch() {
     to()->mangle_unused_area_complete();
   }
 }
-
+// todo gc   DefNewGeneration正式进行Gc前会先检测一下本次Minor Gc是否安全,如果不安全则直接放弃本次Gc,检查策略是 1. To区空闲  2. 下一个内存代的可用空间能够容纳当前内存代的所有对象(用于对象升级)
 bool DefNewGeneration::collection_attempt_is_safe() {
-  if (!to()->is_empty()) {
+  if (!to()->is_empty()) { //  To区空闲
     if (Verbose && PrintGCDetails) {
       gclog_or_tty->print(" :: to is not empty :: ");
     }
@@ -903,7 +903,7 @@ bool DefNewGeneration::collection_attempt_is_safe() {
     GenCollectedHeap* gch = GenCollectedHeap::heap();
     _next_gen = gch->next_gen(this);
   }
-  return _next_gen->promotion_attempt_is_safe(used());
+  return _next_gen->promotion_attempt_is_safe(used()); // 下一个内存代的可用空间能够容纳当前内存代的所有对象(用于对象升级)
 }
 
 void DefNewGeneration::gc_epilogue(bool full) {
@@ -1073,7 +1073,7 @@ HeapWord* DefNewGeneration::allocate(size_t word_size,
 // todo par_allocate 分配内存
 HeapWord* DefNewGeneration::par_allocate(size_t word_size,
                                          bool is_tlab) {
-  HeapWord* res = eden()->par_allocate(word_size);
+  HeapWord* res = eden()->par_allocate(word_size); // todo eden分配
   if (CMSEdenChunksRecordAlways && _next_gen != NULL) {
     _next_gen->sample_eden_chunk();
   }

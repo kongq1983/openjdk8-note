@@ -786,7 +786,7 @@ static void *java_start(Thread *thread) {
   OSThread* osthread = thread->osthread();
   Monitor* sync = osthread->startThread_lock();
 
-  // non floating stack LinuxThreads needs extra check, see above
+  // non floating stack LinuxThreads needs extra check, see above  非浮动堆栈 LinuxThreads 需要额外检查，见上文
   if (!_thread_safety_check(thread)) {
     // notify parent thread
     MutexLockerEx ml(sync, Mutex::_no_safepoint_check_flag);
@@ -1040,7 +1040,7 @@ void os::free_thread(OSThread* osthread) {
 // detachCurrentThread on thread death. Unless we restore the thread pointer we
 // will hang or crash. When detachCurrentThread is called the key will be set
 // to null and we will not be called again. If detachCurrentThread is never
-// called we could loop forever depending on the pthread implementation.
+// called we could loop forever depending on the pthread implementation.   如果detachCurrentThread从不调用我们可以根据pthread实现永远循环
 static void restore_thread_pointer(void* p) {
   Thread* thread = (Thread*) p;
   os::thread_local_storage_at_put(ThreadLocalStorage::thread_index(), thread);
@@ -3764,16 +3764,16 @@ size_t os::read(int fd, void *buf, unsigned int nBytes) {
 int os::sleep(Thread* thread, jlong millis, bool interruptible) { // java thread传过来interruptible=true
   assert(thread == Thread::current(),  "thread consistency check");
 
-  ParkEvent * const slp = thread->_SleepEvent ;
+  ParkEvent * const slp = thread->_SleepEvent ; // todo 获取线程的_SleepEvent(ParkEvent)
   slp->reset() ;
-  OrderAccess::fence() ;
+  OrderAccess::fence() ; // lock addl
 
   if (interruptible) {
     jlong prevtime = javaTimeNanos();
 
     for (;;) {
-      if (os::is_interrupted(thread, true)) {
-        return OS_INTRPT;
+      if (os::is_interrupted(thread, true)) { // 已中断 true清理标记位  这里还没有休眠 park()
+        return OS_INTRPT; // 这个时候，程序没中断，还没运行
       }
 
       jlong newtime = javaTimeNanos();
@@ -4188,7 +4188,7 @@ static void do_resume(OSThread* osthread) {
 
 ////////////////////////////////////////////////////////////////////////////////
 // interrupt support
-
+// todo os::interrupt   todo interrupt
 void os::interrupt(Thread* thread) {
   assert(Thread::current() == thread || Threads_lock->owned_by_self(),
     "possibility of dangling Thread pointer");
@@ -4202,15 +4202,15 @@ void os::interrupt(Thread* thread) {
     // to interrupted() to be visible to other threads before we execute unpark(). 在我们执行 unpark() 之前，使 interrupted() 对其他线程可见
     OrderAccess::fence();  // 保证可见性
     ParkEvent * const slp = thread->_SleepEvent ;
-    if (slp != NULL) slp->unpark() ; // 唤醒
+    if (slp != NULL) slp->unpark() ; // 如果是sleep()，则唤醒sleep
   }
 
   // For JSR166. Unpark even if interrupt status already was set
   if (thread->is_Java_thread())
-    ((JavaThread*)thread)->parker()->unpark();  // 唤醒线程
+    ((JavaThread*)thread)->parker()->unpark();  // LockSupport.park 唤醒线程
 
   ParkEvent * ev = thread->_ParkEvent ;
-  if (ev != NULL) ev->unpark() ;  // 唤醒线程
+  if (ev != NULL) ev->unpark() ;  // 唤醒线程  比如wait()?
 
 }
 // todo is_interrupted
@@ -5967,7 +5967,7 @@ void Parker::unpark() {
   if (s < 1) {
     // thread might be parked  线程可能被parked
     if (_cur_index != -1) { // _cur_index在park()赋值
-      // thread is definitely parked
+      // thread is definitely parked  线程确实是parked()
       if (WorkAroundNPTLTimedWaitHang) {
         status = pthread_cond_signal (&_cond[_cur_index]);
         assert (status == 0, "invariant");

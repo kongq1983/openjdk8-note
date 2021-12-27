@@ -160,7 +160,7 @@ class VM_GC_HeapInspection: public VM_GC_Operation {
   bool collect();
 };
 
-
+// todo VM_GenCollectForAllocation
 class VM_GenCollectForAllocation: public VM_GC_Operation {
  private:
   HeapWord*   _res;

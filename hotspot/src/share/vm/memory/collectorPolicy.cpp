@@ -654,17 +654,17 @@ HeapWord* GenCollectorPolicy::mem_allocate_work(size_t size,
 
   HeapWord* result = NULL;
 
-  // Loop until the allocation is satisified,
-  // or unsatisfied after GC.  -------------start
-  for (int try_count = 1, gclocker_stalled_count = 0; /* return or throw */; try_count += 1) {
+  // Loop until the allocation is satisified,  循环直到分配得到满足
+  // or unsatisfied after GC.  或者在 GC 后不满足  -------------start
+  for (int try_count = 1, gclocker_stalled_count = 0; /* return or throw */; try_count += 1) {  // 一直循环
     HandleMark hm; // discard any handles allocated in each iteration
 
     // First allocation attempt is lock-free.
-    Generation *gen0 = gch->get_gen(0);
+    Generation *gen0 = gch->get_gen(0); // 新生代
     assert(gen0->supports_inline_contig_alloc(),
       "Otherwise, must do alloc within heap lock");  // 这一步只会分配小对象
     if (gen0->should_allocate(size, is_tlab)) { // 新生代是否允许分配　DefNewGeneration::should_allocate:262  空间未满  && 字节数>0  && ( is_tlab=true || PretenureSizeThreshold非0 || 小对象)
-      result = gen0->par_allocate(size, is_tlab); // DefNewGeneration::par_allocate;1074   eden()->par_allocate是关键，最后将由par_allocate_impl来实现
+      result = gen0->par_allocate(size, is_tlab); // 在eden()分配  DefNewGeneration::par_allocate;1074   eden()->par_allocate是关键，最后将由par_allocate_impl来实现
       if (result != NULL) { // 首先判断是否可以在Young区分配空间，如果可以，那么就在Young区域分配，如果分配成功了，那么就可以结束这次内存分配之旅了
         assert(gch->is_in_reserved(result), "result not in heap");
         return result;  // 先在eden分配
@@ -672,26 +672,26 @@ HeapWord* GenCollectorPolicy::mem_allocate_work(size_t size,
     }
     unsigned int gc_count_before;  // read inside the Heap_lock locked region
     {
-      MutexLocker ml(Heap_lock);
+      MutexLocker ml(Heap_lock); // 加锁
       if (PrintGC && Verbose) {
         gclog_or_tty->print_cr("TwoGenerationCollectorPolicy::mem_allocate_work:"
                       " attempting locked slow path allocation");
       }
       // Note that only large objects get a shot at being
-      // allocated in later generations.  只有大对象可以被分配在老年代。一般情况下都是false, 所以first_only=true
+      // allocated in later generations.  只有大对象可以被分配在老年代。一般情况下都是false, 所以first_only=true (新生代)
       bool first_only = ! should_try_older_generation_allocation(size); // 这3种返回true:  新生代空间不够 || gc locker 被占用（jni 临界区）|| 最近发生过一次担保失败或者可能发生担保失败
       // 如果first_only = false 要进入老年代
-      result = gch->attempt_allocation(size, is_tlab, first_only); // 在每个代尝试分配，first_only=true时只会在年轻代分配
+      result = gch->attempt_allocation(size, is_tlab, first_only); // todo 在每个代尝试分配，first_only=true时只会在年轻代分配
       if (result != NULL) {
         assert(gch->is_in_reserved(result), "result not in heap");
         return result; // 大对象有可能在这里分配成功  这里对象分配不成功 下面要gc了
       }
       // Gc操作已被触发但还无法被执行,一般不会出现这种情况，只有在jni中jni_GetStringCritical等方法被调用时出现is_active_and_needs_gc=TRUE，主要是为了避免GC导致对象地址改变
-      if (GC_locker::is_active_and_needs_gc()) {
+      if (GC_locker::is_active_and_needs_gc()) { // 表示有jni在操作内存，此时不能进行GC避免改变对象在内存的位置
         if (is_tlab) {
           return NULL;  // Caller will retry allocating individual object
         }
-        if (!gch->is_maximal_no_gc()) { // 因为不能进行GC回收，所以只能尝试通过扩堆
+        if (!gch->is_maximal_no_gc()) { // 尽量不gc   因为不能进行GC回收，所以只能尝试通过扩堆
           // Try and expand heap to satisfy request
           result = expand_heap_and_allocate(size, is_tlab);
           // result could be null if we are out of space
@@ -797,7 +797,7 @@ HeapWord* GenCollectorPolicy::satisfy_failed_allocation(size_t size,
     if (!gch->is_maximal_no_gc()) { // 尽量不gc
       result = expand_heap_and_allocate(size, is_tlab); // 扩堆
     }
-    return result;   // could be null if we are out of space
+    return result;   // could be null if we are out of space  如果空间不足，则可能为空
   } else if (!gch->incremental_collection_will_fail(false /* don't consult_young */)) {
     // Do an incremental collection.
     gch->do_collection(false            /* full */,
