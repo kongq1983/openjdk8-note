@@ -168,9 +168,9 @@ class MetaWord {
 // HeapWordSize must be 2^LogHeapWordSize.
 const int HeapWordSize        = sizeof(HeapWord);
 #ifdef _LP64
-const int LogHeapWordSize     = 3;
+const int LogHeapWordSize     = 3; // 64位  2的3次方=8
 #else
-const int LogHeapWordSize     = 2;
+const int LogHeapWordSize     = 2; // 32位  2的2次方=4
 #endif
 const int HeapWordsPerLong    = BytesPerLong / HeapWordSize;
 const int LogHeapWordsPerLong = LogBytesPerLong - LogHeapWordSize;

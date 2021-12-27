@@ -137,7 +137,7 @@ class AllocatedObj {
  */
 enum MemoryType {
   // Memory type by sub systems. It occupies lower byte.
-  mtJavaHeap          = 0x00,  // Java heap
+  mtJavaHeap          = 0x00,  // Java heap java堆
   mtClass             = 0x01,  // memory class for Java classes
   mtThread            = 0x02,  // memory for thread objects
   mtThreadStack       = 0x03,
@@ -147,8 +147,8 @@ enum MemoryType {
   mtInternal          = 0x07,  // memory used by VM, but does not belong to
                                  // any of above categories, and not used for
                                  // native memory tracking
-  mtOther             = 0x08,  // memory not used by VM
-  mtSymbol            = 0x09,  // symbol
+  mtOther             = 0x08,  // memory not used by VM 不是JVM使用的内存
+  mtSymbol            = 0x09,  // symbol 符号表使用的内存
   mtNMT               = 0x0A,  // memory used by native memory tracking
   mtClassShared       = 0x0B,  // class data sharing
   mtChunk             = 0x0C,  // chunk that holds content of arenas

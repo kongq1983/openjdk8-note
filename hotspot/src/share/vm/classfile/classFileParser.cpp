@@ -1987,7 +1987,7 @@ void ClassFileParser::copy_method_annotations(ConstMethod* cm,
 // The promoted_flags parameter is used to pass relevant access_flags
 // from the method back up to the containing klass. These flag values
 // are added to klass's access_flags.
-
+// todo parse method
 methodHandle ClassFileParser::parse_method(bool is_interface,
                                            AccessFlags *promoted_flags,
                                            TRAPS) {
@@ -2551,7 +2551,7 @@ Array<Method*>* ClassFileParser::parse_methods(bool is_interface,
       // declares_default_methods: declares concrete instance methods, any access flags
       // used for interface initialization, and default method inheritance analysis
       if (is_interface && !(*declares_default_methods)
-        && !method->is_abstract() && !method->is_static()) {
+        && !method->is_abstract() && !method->is_static()) { // static
         *declares_default_methods = true;
       }
       _methods->at_put(index, method());

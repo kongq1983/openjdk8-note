@@ -632,7 +632,7 @@ void java_lang_Class::create_mirror(KlassHandle k, Handle class_loader,
     // Setup indirection from klass->mirror last
     // after any exceptions can happen during allocations.
     if (!k.is_null()) {
-      k->set_java_mirror(mirror()); // todo 设置java_mirror
+      k->set_java_mirror(mirror()); // todo 设置java_mirror  import-import-import
     }
   } else {
     if (fixup_mirror_list() == NULL) {

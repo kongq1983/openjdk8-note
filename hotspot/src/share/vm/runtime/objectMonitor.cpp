@@ -951,7 +951,7 @@ void ObjectMonitor::UnlinkAfterAcquire (Thread * Self, ObjectWaiter * SelfNode)
 // the integral of the # of active timers at any instant over time).
 // Both impinge on OS scalability.  Given that, at most one thread parked on
 // a monitor will use a timer.
-
+// todo exit
 void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
    Thread * Self = THREAD ;
    if (THREAD != _owner) { // 如果当前线程不是Monitor的所有者
@@ -1099,14 +1099,14 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
       ObjectWaiter * w = NULL ;
       int QMode = Knob_QMode ;
 
-      if (QMode == 2 && _cxq != NULL) {
-          // QMode == 2 : cxq has precedence over EntryList.
-          // Try to directly wake a successor from the cxq.
-          // If successful, the successor will need to unlink itself from cxq.
+      if (QMode == 2 && _cxq != NULL) { // todo 上面默认2
+          // QMode == 2 : cxq has precedence over EntryList.  QMode == 2 : cxq 优先于 EntryList。
+          // Try to directly wake a successor from the cxq.   尝试直接从 cxq 唤醒一个后继者。
+          // If successful, the successor will need to unlink itself from cxq. 如果成功，后继者将需要将自身与 cxq 解除链接。
           w = _cxq ;
           assert (w != NULL, "invariant") ;
           assert (w->TState == ObjectWaiter::TS_CXQ, "Invariant") ;
-          ExitEpilog (Self, w) ;
+          ExitEpilog (Self, w) ; // 唤醒w->event.unpark()
           return ;
       }
 
@@ -1326,22 +1326,22 @@ bool ObjectMonitor::ExitSuspendEquivalent (JavaThread * jSelf) {
 void ObjectMonitor::ExitEpilog (Thread * Self, ObjectWaiter * Wakee) {
    assert (_owner == Self, "invariant") ;
 
-   // Exit protocol:
-   // 1. ST _succ = wakee
-   // 2. membar #loadstore|#storestore;
-   // 2. ST _owner = NULL
-   // 3. unpark(wakee)
+   // Exit protocol: 退出协议：
+   // 1. ST _succ = wakee  1. ST _succ = 唤醒
+   // 2. membar #loadstore|#storestore;  2. membar #loadstore|#storestore;
+   // 2. ST _owner = NULL  2. ST_owner = NULL
+   // 3. unpark(wakee)  3. unpark(wakee)
 
    _succ = Knob_SuccEnabled ? Wakee->_thread : NULL ;
    ParkEvent * Trigger = Wakee->_event ;
-
+   // 一旦我们设置了 _owner = NULL，我们就不能再次安全地取消引用 Wakee
    // Hygiene -- once we've set _owner = NULL we can't safely dereference Wakee again.
    // The thread associated with Wakee may have grabbed the lock and "Wakee" may be
-   // out-of-scope (non-extant).
+   // out-of-scope (non-extant). 与 Wakee 关联的线程可能已经抓住了锁，而“Wakee”可能是 范围外（非现存）
    Wakee  = NULL ;
 
    // Drop the lock
-   OrderAccess::release_store_ptr (&_owner, NULL) ;
+   OrderAccess::release_store_ptr (&_owner, NULL) ; // 释放锁
    OrderAccess::fence() ;                               // ST _owner vs LD in unpark()
 
    if (SafepointSynchronize::do_call_back()) {
@@ -1753,15 +1753,15 @@ void ObjectMonitor::notify(TRAPS) {
      } else
      if (Policy == 2) {      // prepend to cxq   默认策略2   _EntryList队列为空就放入_EntryList，   否则放入_cxq队列的排头位置
          // prepend to cxq
-         if (List == NULL) {
+         if (List == NULL) { // List是_EntryList
              iterator->_next = iterator->_prev = NULL ;
-             _EntryList = iterator ;
+             _EntryList = iterator ; // 因为EntryList为空，所以放入了EntryList首位
          } else {
             iterator->TState = ObjectWaiter::TS_CXQ ;
-            for (;;) {
+            for (;;) { // ObjectWaiter * iterator = DequeueWaiter() ;  DequeueWaiter 就是 _WaitSet
                 ObjectWaiter * Front = _cxq ;
-                iterator->_next = Front ;
-                if (Atomic::cmpxchg_ptr (iterator, &_cxq, Front) == Front) {
+                iterator->_next = Front ; // _WaitSet在前和_cxq在后合并到_cxq  (prepend to cxq)
+                if (Atomic::cmpxchg_ptr (iterator, &_cxq, Front) == Front) { //新的_cxq(_WaitSet在前和_cxq在后)替换老的_cxq
                     break ;
                 }
             }
@@ -1785,11 +1785,11 @@ void ObjectMonitor::notify(TRAPS) {
                 break ;
             }
         }
-     } else {
+     } else { // 这里会执行 !=3
         ParkEvent * ev = iterator->_event ;
         iterator->TState = ObjectWaiter::TS_RUN ;
         OrderAccess::fence() ;
-        ev->unpark() ;
+        ev->unpark() ;  // 唤醒
      }
 
      if (Policy < 4) {
@@ -2322,7 +2322,7 @@ void ObjectWaiter::wait_reenter_end(ObjectMonitor *mon) {
   JavaThread *jt = (JavaThread *)this->_thread;
   JavaThreadBlockedOnMonitorEnterState::wait_reenter_end(jt, _active);
 }
-
+// todo _WaitSet 循环双向链表
 inline void ObjectMonitor::AddWaiter(ObjectWaiter* node) {
   assert(node != NULL, "should not dequeue NULL node");
   assert(node->_prev == NULL, "node already in list");
@@ -2342,7 +2342,7 @@ inline void ObjectMonitor::AddWaiter(ObjectWaiter* node) {
     node->_prev = tail;
   }
 }
-
+// todo _WaitSet
 inline ObjectWaiter* ObjectMonitor::DequeueWaiter() {
   // dequeue the very first waiter
   ObjectWaiter* waiter = _WaitSet;

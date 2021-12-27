@@ -487,7 +487,7 @@ void Klass::klass_oop_store(oop* p, oop v) {
     klass_oop_store((volatile oop*)p, v);
   } else {
     klass_update_barrier_set_pre(p, v);
-    *p = v;
+    *p = v; // 赋值  _java_mirror = v
     klass_update_barrier_set(v);
   }
 }

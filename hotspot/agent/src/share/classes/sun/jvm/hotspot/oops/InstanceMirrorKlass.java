@@ -55,7 +55,7 @@ public class InstanceMirrorKlass extends InstanceKlass {
   public long getObjectSize(Oop o) {
     return java_lang_Class.getOopSize(o) * VM.getVM().getAddressSize();
   }
-
+  // todo 遍历非静态字段
   public void iterateNonStaticFields(OopVisitor visitor, Oop obj) {
     super.iterateNonStaticFields(visitor, obj);
     // Fetch the real klass from the mirror object
