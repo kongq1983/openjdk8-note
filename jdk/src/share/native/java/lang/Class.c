@@ -132,7 +132,7 @@ Java_java_lang_Class_forName0(JNIEnv *env, jclass this, jstring classname,
         goto done;
     }
 
-    cls = JVM_FindClassFromCaller(env, clname, initialize, loader, caller);
+    cls = JVM_FindClassFromCaller(env, clname, initialize, loader, caller); // jvm.cpp:896
 
  done:
     if (clname != buf) {

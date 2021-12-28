@@ -43,7 +43,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import sun.security.action.GetBooleanAction;
 
-/**
+/** todo proxy
  * ProxyGenerator contains the code to generate a dynamic proxy class
  * for the java.lang.reflect.Proxy API.
  *
@@ -517,51 +517,51 @@ public class ProxyGenerator {
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         DataOutputStream dout = new DataOutputStream(bout);
 
-        try {
+        try { // todo 动态生成类
             /*
              * Write all the items of the "ClassFile" structure.
              * See JVMS section 4.1.
              */
-                                        // u4 magic;
+                                        // u4 magic; 写入魔数
             dout.writeInt(0xCAFEBABE);
-                                        // u2 minor_version;
+                                        // u2 minor_version; 写入次版本号
             dout.writeShort(CLASSFILE_MINOR_VERSION);
-                                        // u2 major_version;
+                                        // u2 major_version; 写入主版本号
             dout.writeShort(CLASSFILE_MAJOR_VERSION);
-
+            // 写入常量池
             cp.write(dout);             // (write constant pool)
 
-                                        // u2 access_flags;
+                                        // u2 access_flags; 写入访问修饰符
             dout.writeShort(accessFlags);
-                                        // u2 this_class;
+                                        // u2 this_class;  本类
             dout.writeShort(cp.getClass(dotToSlash(className)));
-                                        // u2 super_class;
+                                        // u2 super_class;  父类  生成的代理类都继承自Proxy
             dout.writeShort(cp.getClass(superclassName));
 
-                                        // u2 interfaces_count;
+                                        // u2 interfaces_count; 接口数量
             dout.writeShort(interfaces.length);
-                                        // u2 interfaces[interfaces_count];
+                                        // u2 interfaces[interfaces_count];   具体的接口集合
             for (Class<?> intf : interfaces) {
                 dout.writeShort(cp.getClass(
                     dotToSlash(intf.getName())));
             }
 
-                                        // u2 fields_count;
+                                        // u2 fields_count;  字段数量
             dout.writeShort(fields.size());
-                                        // field_info fields[fields_count];
+                                        // field_info fields[fields_count];  具体字段信息集合
             for (FieldInfo f : fields) {
                 f.write(dout);
             }
 
-                                        // u2 methods_count;
+                                        // u2 methods_count;   方法数量
             dout.writeShort(methods.size());
-                                        // method_info methods[methods_count];
+                                        // method_info methods[methods_count];  具体的方法集合
             for (MethodInfo m : methods) {
                 m.write(dout);
             }
 
                                          // u2 attributes_count;
-            dout.writeShort(0); // (no ClassFile attributes for proxy classes)
+            dout.writeShort(0); // (no ClassFile attributes for proxy classes)  写入属性计数值, 代理类class文件没有属性所以为0
 
         } catch (IOException e) {
             throw new InternalError("unexpected I/O Exception", e);

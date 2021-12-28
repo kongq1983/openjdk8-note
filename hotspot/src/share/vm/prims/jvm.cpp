@@ -906,7 +906,7 @@ JVM_ENTRY(jclass, JVM_FindClassFromCaller(JNIEnv* env, const char* name,
 
   TempNewSymbol h_name = SymbolTable::new_symbol(name, CHECK_NULL);
 
-  oop loader_oop = JNIHandles::resolve(loader);
+  oop loader_oop = JNIHandles::resolve(loader); // oop result = (handle == NULL ? (oop)NULL : *(oop*)handle);
   oop from_class = JNIHandles::resolve(caller);
   oop protection_domain = NULL;
   // If loader is null, shouldn't call ClassLoader.checkPackageAccess; otherwise get
