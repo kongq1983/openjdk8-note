@@ -3301,7 +3301,7 @@ void Threads::threads_do(ThreadClosure* tc) {
 
   // If CompilerThreads ever become non-JavaThreads, add them here
 }
-
+// todo Threads::create_vm
 jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
 
   extern void JDK_Version_init();
@@ -4430,9 +4430,9 @@ void Threads::print_on_error(outputStream* st, Thread* current, char* buf, int b
 
 
 typedef volatile int SpinLockT ;
-
+// todo thread SpinAcquire
 void Thread::SpinAcquire (volatile int * adr, const char * LockName) {
-  if (Atomic::cmpxchg (1, adr, 0) == 0) {
+  if (Atomic::cmpxchg (1, adr, 0) == 0) { // 改成1
      return ;   // normal fast-path return
   }
 
@@ -4457,7 +4457,7 @@ void Thread::SpinAcquire (volatile int * adr, const char * LockName) {
      if (Atomic::cmpxchg (1, adr, 0) == 0) return ;
   }
 }
-
+// 变0
 void Thread::SpinRelease (volatile int * adr) {
   assert (*adr != 0, "invariant") ;
   OrderAccess::fence() ;      // guarantee at least release consistency.

@@ -68,7 +68,7 @@ public class Launcher {
         // Create the extension class loader
         ClassLoader extcl;
         try {
-            extcl = ExtClassLoader.getExtClassLoader();
+            extcl = ExtClassLoader.getExtClassLoader(); // ExtClassLoader
         } catch (IOException e) {
             throw new InternalError(
                 "Could not create extension class loader", e);
@@ -76,7 +76,7 @@ public class Launcher {
 
         // Now create the class loader to use to launch the application
         try {
-            loader = AppClassLoader.getAppClassLoader(extcl);
+            loader = AppClassLoader.getAppClassLoader(extcl); // AppClassLoader
         } catch (IOException e) {
             throw new InternalError(
                 "Could not create application class loader", e);
