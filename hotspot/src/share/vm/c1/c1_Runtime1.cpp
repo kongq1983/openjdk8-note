@@ -1315,7 +1315,7 @@ template <class T> int obj_arraycopy_work(oopDesc* src, T* src_addr,
   }
   return ac_failed;
 }
-
+// todo arraycopy
 // fast and direct copy of arrays; returning -1, means that an exception may be thrown
 // and we did not copy anything
 JRT_LEAF(int, Runtime1::arraycopy(oopDesc* src, int src_pos, oopDesc* dst, int dst_pos, int length))
@@ -1329,20 +1329,20 @@ JRT_LEAF(int, Runtime1::arraycopy(oopDesc* src, int src_pos, oopDesc* dst, int d
   if ((unsigned int) arrayOop(dst)->length() < (unsigned int)dst_pos + (unsigned int)length) return ac_failed;
 
   if (length == 0) return ac_ok;
-  if (src->is_typeArray()) {
+  if (src->is_typeArray()) {  // todo 基本类型数组
     Klass* klass_oop = src->klass();
     if (klass_oop != dst->klass()) return ac_failed;
     TypeArrayKlass* klass = TypeArrayKlass::cast(klass_oop);
     const int l2es = klass->log2_element_size();
     const int ihs = klass->array_header_in_bytes() / wordSize;
-    char* src_addr = (char*) ((oopDesc**)src + ihs) + (src_pos << l2es);
+    char* src_addr = (char*) ((oopDesc**)src + ihs) + (src_pos << l2es); // oopDesc** = oopDesc*地址上的值
     char* dst_addr = (char*) ((oopDesc**)dst + ihs) + (dst_pos << l2es);
     // Potential problem: memmove is not guaranteed to be word atomic
-    // Revisit in Merlin
-    memmove(dst_addr, src_addr, length << l2es);
+    // Revisit in Merlin   // str1 -- 指向用于存储复制内容的目标数组，类型强制转换为 void* 指针   str2 -- 指向要复制的数据源，类型强制转换为 void* 指针。  n -- 要被复制的字节数。
+    memmove(dst_addr, src_addr, length << l2es); // void *memmove(void *str1, const void *str2, size_t n)
     return ac_ok;
-  } else if (src->is_objArray() && dst->is_objArray()) {
-    if (UseCompressedOops) {
+  } else if (src->is_objArray() && dst->is_objArray()) { // 对象数组
+    if (UseCompressedOops) { // 指针压缩
       narrowOop *src_addr  = objArrayOop(src)->obj_at_addr<narrowOop>(src_pos);
       narrowOop *dst_addr  = objArrayOop(dst)->obj_at_addr<narrowOop>(dst_pos);
       return obj_arraycopy_work(src, src_addr, dst, dst_addr, length);

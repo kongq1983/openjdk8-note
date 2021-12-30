@@ -317,7 +317,7 @@ static HeuristicsResult update_heuristics(oop o, bool allow_rebias) {
   return HR_SINGLE_REVOKE;
 }
 
-
+// todo 批量撤销和批量重偏向
 static BiasedLocking::Condition bulk_revoke_or_rebias_at_safepoint(oop o,
                                                                    bool bulk_rebias,
                                                                    bool attempt_rebias_of_object,
@@ -354,8 +354,8 @@ static BiasedLocking::Condition bulk_revoke_or_rebias_at_safepoint(oop o,
       klass->set_prototype_header(klass->prototype_header()->incr_bias_epoch());
       int cur_epoch = klass->prototype_header()->bias_epoch();
 
-      // Now walk all threads' stacks and adjust epochs of any biased
-      // and locked objects of this data type we encounter
+      // Now walk all threads' stacks and adjust epochs of any biased // 现在遍历所有线程的堆栈并调整epochs of any biased
+      // and locked objects of this data type we encounter // 和我们遇到的这种数据类型的锁定对象
       for (JavaThread* thr = Threads::first(); thr != NULL; thr = thr->next()) {
         GrowableArray<MonitorInfo*>* cached_monitor_info = get_or_compute_monitor_info(thr);
         for (int i = 0; i < cached_monitor_info->length(); i++) {
@@ -365,7 +365,7 @@ static BiasedLocking::Condition bulk_revoke_or_rebias_at_safepoint(oop o,
           if ((owner->klass() == k_o) && mark->has_bias_pattern()) {
             // We might have encountered this object already in the case of recursive locking
             assert(mark->bias_epoch() == prev_epoch || mark->bias_epoch() == cur_epoch, "error in bias epoch adjustment");
-            owner->set_mark(mark->set_bias_epoch(cur_epoch));
+            owner->set_mark(mark->set_bias_epoch(cur_epoch)); // 设置cur_epoch
           }
         }
       }
@@ -379,12 +379,12 @@ static BiasedLocking::Condition bulk_revoke_or_rebias_at_safepoint(oop o,
       ResourceMark rm;
       tty->print_cr("* Disabling biased locking for type %s", klass->external_name());
     }
-
-    // Disable biased locking for this data type. Not only will this
-    // cause future instances to not be biased, but existing biased
+    // todo批量撤销
+    // Disable biased locking for this data type. Not only will this   禁用偏向锁。这会导致对象不会偏向了
+    // cause future instances to not be biased, but existing biased 已经存在的偏向锁对象，会通知，这些偏向会被撤销
     // instances will notice that this implicitly caused their biases
     // to be revoked.
-    klass->set_prototype_header(markOopDesc::prototype());
+    klass->set_prototype_header(markOopDesc::prototype());   // 轻量级锁
 
     // Now walk all threads' stacks and forcibly revoke the biases of
     // any locked and biased objects of this data type we encounter.
@@ -588,7 +588,7 @@ BiasedLocking::Condition BiasedLocking::revoke_and_rebias(Handle obj, bool attem
     }
   }
   //5:没有执行偏向，通过启发式的方式决定到底是执行撤销还是执行rebias  todo 启发式偏向
-  HeuristicsResult heuristics = update_heuristics(obj(), attempt_rebias);
+  HeuristicsResult heuristics = update_heuristics(obj(), attempt_rebias);  // todo 偏向锁 import-import-impport
   if (heuristics == HR_NOT_BIASED) {
     return NOT_BIASED; //没有偏向
   } else if (heuristics == HR_SINGLE_REVOKE) {
