@@ -464,7 +464,7 @@ void Space::adjust_pointers() {
   HeapWord* t = end();
 
   debug_only(HeapWord* prev_q = NULL);
-  while (q < t) {
+  while (q < t) { // todo 个人理解  遍历全部对象
     if (oop(q)->is_gc_marked()) {
       // q is alive
 

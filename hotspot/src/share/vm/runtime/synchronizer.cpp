@@ -245,19 +245,19 @@ void ObjectSynchronizer::slow_enter(Handle obj, BasicLock* lock, TRAPS) {
   }
 
 #if 0
-  // The following optimization isn't particularly useful.
+  // The following optimization isn't particularly useful. 以下优化不是特别有用
   if (mark->has_monitor() && mark->monitor()->is_entered(THREAD)) { // 重量级锁
-    lock->set_displaced_header (NULL) ;
+    lock->set_displaced_header (NULL) ; // 去除轻量级锁信息
     return ;
   }
 #endif
    //// 走到这一步说明已经是存在多个线程竞争锁了 需要膨胀为重量级锁
-  // The object header will never be displaced to this lock,
-  // so it does not matter what the value is, except that it
-  // must be non-zero to avoid looking like a re-entrant lock,
-  // and must not look locked either.
-  lock->set_displaced_header(markOopDesc::unused_mark());
-  ObjectSynchronizer::inflate(THREAD, obj())->enter(THREAD);
+  // The object header will never be displaced to this lock,  对象头永远不会被移到这个锁上，
+  // so it does not matter what the value is, except that it  所以它的值是什么并不重要，除了它
+  // must be non-zero to avoid looking like a re-entrant lock,  必须非零，以避免看起来像一个重入锁，
+  // and must not look locked either.  并且看起来也不能被锁定
+  lock->set_displaced_header(markOopDesc::unused_mark()); // BasicLock marked_value = 0011 = 3
+  ObjectSynchronizer::inflate(THREAD, obj())->enter(THREAD);  // 锁膨胀
 }
 // monitorexit  todo slow_exit-> fast_exit
 // This routine is used to handle interpreter/compiler slow case
