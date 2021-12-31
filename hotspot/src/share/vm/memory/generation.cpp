@@ -619,7 +619,7 @@ void CardGeneration::prepare_for_verify() {}
 
 
 void OneContigSpaceCardGeneration::collect(bool   full,
-                                           bool   clear_all_soft_refs,
+                                           bool   clear_all_soft_refs, //todo soft
                                            size_t size,
                                            bool   is_tlab) {
   GenCollectedHeap* gch = GenCollectedHeap::heap();

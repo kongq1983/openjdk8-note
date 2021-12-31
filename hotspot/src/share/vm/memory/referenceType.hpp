@@ -28,7 +28,7 @@
 #include "utilities/debug.hpp"
 
 // ReferenceType is used to distinguish between java/lang/ref/Reference subclasses
-
+// todo soft
 enum ReferenceType {
   REF_NONE,      // Regular class
   REF_OTHER,     // Subclass of java/lang/ref/Reference, but not subclass of one of the classes below

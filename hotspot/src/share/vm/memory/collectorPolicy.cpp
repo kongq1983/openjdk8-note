@@ -160,7 +160,7 @@ GenRemSet* CollectorPolicy::create_rem_set(MemRegion whole_heap,
                                            int max_covered_regions) {
   return new CardTableRS(whole_heap, max_covered_regions);
 }
-
+// todo soft clear
 void CollectorPolicy::cleared_all_soft_refs() {
   // If near gc overhear limit, continue to clear SoftRefs.  SoftRefs may
   // have been cleared in the last collection but if the gc overhear

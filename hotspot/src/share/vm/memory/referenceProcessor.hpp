@@ -260,8 +260,8 @@ class ReferenceProcessor : public CHeapObj<mtGC> {
   DiscoveredList* _discovered_refs;
 
   // Arrays of lists of oops, one per thread (pointers into master array above)
-  DiscoveredList* _discoveredSoftRefs;
-  DiscoveredList* _discoveredWeakRefs;
+  DiscoveredList* _discoveredSoftRefs; // todo soft
+  DiscoveredList* _discoveredWeakRefs; // todo weaksoft
   DiscoveredList* _discoveredFinalRefs;
   DiscoveredList* _discoveredPhantomRefs;
   DiscoveredList* _discoveredCleanerRefs;

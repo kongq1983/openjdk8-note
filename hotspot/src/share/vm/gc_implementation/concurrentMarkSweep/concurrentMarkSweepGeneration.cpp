@@ -2568,7 +2568,7 @@ void CMSCollector::collect_in_foreground(bool clear_all_soft_refs, GCCause::Caus
       gclog_or_tty->print_cr("Thread " INTPTR_FORMAT " in CMS state %d",
         Thread::current(), _collectorState);
     }
-    switch (_collectorState) {
+    switch (_collectorState) {  // todo cms 标记
       case InitialMarking:
         register_foreground_gc_start(cause);
         init_mark_was_synchronous = true;  // fact to be exploited in re-mark
