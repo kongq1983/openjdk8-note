@@ -142,7 +142,7 @@ static GrowableArray<MonitorInfo*>* get_or_compute_monitor_info(JavaThread* thre
   return info;
 }
 
-// 611调用   todo revoke_bias  611过来  allow_rebias=false   is_bulk=flase
+// todo  611调用  偏向锁撤销  todo revoke_bias  611过来  allow_rebias=false   is_bulk=flase or true  批量撤销is_bulk=true
 static BiasedLocking::Condition revoke_bias(oop obj, bool allow_rebias, bool is_bulk, JavaThread* requesting_thread) {
   markOop mark = obj->mark();
   if (!mark->has_bias_pattern()) {
@@ -153,7 +153,7 @@ static BiasedLocking::Condition revoke_bias(oop obj, bool allow_rebias, bool is_
     }
     return BiasedLocking::NOT_BIASED; // 没有偏向
   }
-
+ // 到这里说明已偏向
   uint age = mark->age();
   markOop   biased_prototype = markOopDesc::biased_locking_prototype()->set_age(age); // 初始化偏向锁状态，并设置age
   markOop unbiased_prototype = markOopDesc::prototype()->set_age(age); // 无锁设置age
@@ -165,12 +165,12 @@ static BiasedLocking::Condition revoke_bias(oop obj, bool allow_rebias, bool is_
   }
 
   JavaThread* biased_thread = mark->biased_locker(); // 有没有偏向锁持有线程
-  if (biased_thread == NULL) { // 没有持有线程
-    // Object is anonymously biased. We can get here if, for
+  if (biased_thread == NULL) { // 没有偏向线程 匿名偏向
+    // Object is anonymously biased. We can get here if, for  匿名偏向。 我们可以到达这里，比如 我们撤销偏向是因为该对象生成了hashcode
     // example, we revoke the bias due to an identity hash code
     // being computed for an object.
     if (!allow_rebias) { // allow_rebias=false 撤销  不允许再偏向
-      obj->set_mark(unbiased_prototype);  // 设置无锁-撤销偏向锁
+      obj->set_mark(unbiased_prototype);  // 撤销偏向锁(恢复到无锁状态)
     }
     if (TraceBiasedLocking && (Verbose || !is_bulk)) {
       tty->print_cr("  Revoked bias of anonymously-biased object");
@@ -180,7 +180,7 @@ static BiasedLocking::Condition revoke_bias(oop obj, bool allow_rebias, bool is_
     // 有偏向锁持有线程
   // Handle case where the thread toward which the object was biased has exited
   bool thread_is_alive = false;
-  if (requesting_thread == biased_thread) {
+  if (requesting_thread == biased_thread) { // 是同个线程，也就是当前线程就是偏向的线程
     thread_is_alive = true;
   } else {
     for (JavaThread* cur_thread = Threads::first(); cur_thread != NULL; cur_thread = cur_thread->next()) { // todo 遍历java线程
@@ -190,7 +190,7 @@ static BiasedLocking::Condition revoke_bias(oop obj, bool allow_rebias, bool is_
       }
     }
   }
-  if (!thread_is_alive) {  // 找不到持有偏向锁线程
+  if (!thread_is_alive) {  // 有偏向线程ID，但找不到持有偏向锁线程，偏向锁线程已经挂了
     if (allow_rebias) { // 再偏向
       obj->set_mark(biased_prototype);  //设置偏向状态
     } else {
@@ -229,7 +229,7 @@ static BiasedLocking::Condition revoke_bias(oop obj, bool allow_rebias, bool is_
       }
     }
   }
-  if (highest_lock != NULL) { // 修改第一个Lock Record为无锁状态，
+  if (highest_lock != NULL) { // 修改第一个Lock Record为无锁状态，  轻量级锁的Lock Record
     // Fix up highest lock to contain displaced header and point
     // object at it
     highest_lock->set_displaced_header(unbiased_prototype); // 设置第一个Lock Record为无锁状态
@@ -241,7 +241,7 @@ static BiasedLocking::Condition revoke_bias(oop obj, bool allow_rebias, bool is_
     if (TraceBiasedLocking && (Verbose || !is_bulk)) {
       tty->print_cr("  Revoked bias of currently-locked object");
     }
-  } else {
+  } else { // 当前无锁
     if (TraceBiasedLocking && (Verbose || !is_bulk)) {
       tty->print_cr("  Revoked bias of currently-unlocked object");
     }
@@ -395,14 +395,14 @@ static BiasedLocking::Condition bulk_revoke_or_rebias_at_safepoint(oop o,
         oop owner = mon_info->owner();
         markOop mark = owner->mark();
         if ((owner->klass() == k_o) && mark->has_bias_pattern()) {
-          revoke_bias(owner, false, true, requesting_thread); // 撤销
+          revoke_bias(owner, false, true, requesting_thread); // 撤销  // line:146
         }
       }
     }
 
-    // Must force the bias of the passed object to be forcibly revoked
-    // as well to ensure guarantees to callers
-    revoke_bias(o, false, true, requesting_thread);
+    // Must force the bias of the passed object to be forcibly revoked  必须强制传递的对象的偏置被强行撤销
+    // as well to ensure guarantees to callers 以及确保对调用者的保证
+    revoke_bias(o, false, true, requesting_thread);  // line:146
   }
 
   if (TraceBiasedLocking) {
