@@ -217,8 +217,8 @@ class markOopDesc: public oopDesc {
   bool is_unlocked() const {
     return (mask_bits(value(), biased_lock_mask_in_place) == unlocked_value);
   }
-  bool is_marked()   const {
-    return (mask_bits(value(), lock_mask_in_place) == marked_value);
+  bool is_marked()   const { // CMS 用到
+    return (mask_bits(value(), lock_mask_in_place) == marked_value); // marked_value = 0011 = 3
   }
   bool is_neutral()  const { return (mask_bits(value(), biased_lock_mask_in_place) == unlocked_value); } // 0001 无锁
 

@@ -558,7 +558,7 @@ void DefNewGeneration::adjust_desired_tenuring_threshold() {
 }
 // todo gc 新生代回收
 void DefNewGeneration::collect(bool   full,
-                               bool   clear_all_soft_refs,
+                               bool   clear_all_soft_refs, // todo soft
                                size_t size,
                                bool   is_tlab) {
   assert(full || size > 0, "otherwise we don't want to collect");

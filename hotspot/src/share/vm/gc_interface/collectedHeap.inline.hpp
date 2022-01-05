@@ -109,7 +109,7 @@ void CollectedHeap::post_allocation_setup_array(KlassHandle klass,
   // notify jvmti and dtrace (must be after length is set for dtrace)
   post_allocation_notify(klass, new_obj, new_obj->size());
 }
-// todo new 指令 相关业务  collectedHeap定义了Java堆的实现
+// todo new 指令 相关业务  collectedHeap定义了Java堆的实现 内存分配
 HeapWord* CollectedHeap::common_mem_allocate_noinit(KlassHandle klass, size_t size, TRAPS) {
 
   // Clear unhandled oops for memory allocation.  Memory allocation might

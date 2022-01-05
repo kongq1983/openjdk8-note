@@ -163,16 +163,16 @@ void java_lang_String::compute_offsets() {
 // todo String的new 与new构造逻辑并无二致 String-import-import-import
 Handle java_lang_String::basic_create(int length, TRAPS) {
   assert(initialized, "Must be initialized");
-  // Create the String object first, so there's a chance that the String
-  // and the char array it points to end up in the same cache line.
+  // Create the String object first, so there's a chance that the String  首先创建 String 对象，所以 String 有可能
+  // and the char array it points to end up in the same cache line. 和它指向的字符数组在同一个缓存行中结束。
   oop obj;
   obj = InstanceKlass::cast(SystemDictionary::String_klass())->allocate_instance(CHECK_NH);
 
-  // Create the char array.  The String object must be handlized here
-  // because GC can happen as a result of the allocation attempt.
+  // Create the char array.  The String object must be handlized here 创建字符数组。 必须在此处处理 String 对象
+  // because GC can happen as a result of the allocation attempt.  因为GC可能因分配尝试而发生。
   Handle h_obj(THREAD, obj);
   typeArrayOop buffer;
-    buffer = oopFactory::new_charArray(length, CHECK_NH); //理解在内存创建1个数组空间
+    buffer = oopFactory::new_charArray(length, CHECK_NH); //理解在内存创建1个数组空间  创建空数组  应该没值  oopFactory.hpp:45
 
   // Point the String at the char array
   obj = h_obj();

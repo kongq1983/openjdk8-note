@@ -561,7 +561,7 @@ inline oop oopDesc::atomic_compare_exchange_oop(oop exchange_value,
 
 // Used only for markSweep, scavenging
 inline bool oopDesc::is_gc_marked() const {
-  return mark()->is_marked();
+  return mark()->is_marked();  // gc标记
 }
 
 inline bool oopDesc::is_locked() const {
