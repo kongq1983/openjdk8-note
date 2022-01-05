@@ -517,7 +517,7 @@ static markOop ReadStableMark (oop obj) {
          assert (ix >= 0 && ix < NINFLATIONLOCKS, "invariant") ;
          assert ((NINFLATIONLOCKS & (NINFLATIONLOCKS-1)) == 0, "invariant") ;
          Thread::muxAcquire (InflationLocks + ix, "InflationLock") ;
-         while (obj->mark() == markOopDesc::INFLATING()) {
+         while (obj->mark() == markOopDesc::INFLATING()) { // todo 正在膨胀中  只要1个线程处理就可以了
            // Beware: NakedYield() is advisory and has almost no effect on some platforms
            // so we periodically call Self->_ParkEvent->park(1).
            // We use a mixed spin/yield/block mechanism.
@@ -599,7 +599,7 @@ static inline intptr_t get_next_hash(Thread * Self, oop obj) {
   TEVENT (hashCode: GENERATE) ;
   return value;
 }
-//
+// todo hashcode
 intptr_t ObjectSynchronizer::FastHashCode (Thread * Self, oop obj) {
   if (UseBiasedLocking) {
     // NOTE: many places throughout the JVM do not expect a safepoint
@@ -634,7 +634,7 @@ intptr_t ObjectSynchronizer::FastHashCode (Thread * Self, oop obj) {
   ObjectMonitor* monitor = NULL;
   markOop temp, test;
   intptr_t hash;
-  markOop mark = ReadStableMark (obj);
+  markOop mark = ReadStableMark (obj); // 膨胀中
 
   // object should remain ineligible for biased locking
   assert (!mark->has_bias_pattern(), "invariant") ;
@@ -1224,8 +1224,8 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
       // Currently, we spin/yield/park and poll the markword, waiting for inflation to finish.
       // We could always eliminate polling by parking the thread on some auxiliary list.  我们总是可以通过parking，将线程停在某个辅助列表上来消除轮询。
       if (mark == markOopDesc::INFLATING()) { // static markOop INFLATING() { return (markOop) 0; }  INFLATING()=0
-         TEVENT (Inflate: spin while INFLATING) ;
-         ReadStableMark(object) ;
+         TEVENT (Inflate: spin while INFLATING) ; //
+         ReadStableMark(object) ; //正在膨胀中
          continue ;
       }
 
@@ -1291,15 +1291,15 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
           // 0 serves as a "BUSY" inflate-in-progress indicator.
 
 
-          // fetch the displaced mark from the owner's stack.
-          // The owner can't die or unwind past the lock while our INFLATING
-          // object is in the mark.  Furthermore the owner can't complete
+          // fetch the displaced mark from the owner's stack. 从所有者的堆栈中获取displaced mark
+          // The owner can't die or unwind past the lock while our INFLATING  在我们的INFLATING过程中，所有者不能死或解开锁
+          // object is in the mark.  Furthermore the owner can't complete 对象在mark中。 此外所有者无法完成解锁对象
           // an unlock on the object, either.
           markOop dmw = mark->displaced_mark_helper() ;
           assert (dmw->is_neutral(), "invariant") ;
 
-          // Setup monitor fields to proper values -- prepare the monitor
-          m->set_header(dmw) ;
+          // Setup monitor fields to proper values -- prepare the monitor 将监视器字段设置为适当的值——准备监视器
+          m->set_header(dmw) ; // hashcode在dmw
 
           // Optimization: if the mark->locker stack address is associated
           // with this thread we could simply set m->_owner = Self and

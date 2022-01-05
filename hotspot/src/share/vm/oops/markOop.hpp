@@ -301,7 +301,7 @@ class markOopDesc: public oopDesc {
   }
   markOop copy_set_hash(intptr_t hash) const { // todo copy_set_hash
     intptr_t tmp = value() & (~hash_mask_in_place);
-    tmp |= ((hash & hash_mask) << hash_shift);
+    tmp |= ((hash & hash_mask) << hash_shift);  //  hash_mask = (0 << 31)-1   hash_shift=8
     return (markOop)tmp;
   }
   // it is only used to be stored into BasicLock as the
