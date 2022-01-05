@@ -1704,7 +1704,7 @@ void JavaThread::thread_main_inner() {
   delete this;
 }
 
-
+// todo join exit
 static void ensure_join(JavaThread* thread) {
   // We do not need to grap the Threads_lock, since we are operating on ourself.
   Handle threadObj(thread, thread->threadObj());
@@ -1812,16 +1812,16 @@ void JavaThread::exit(bool destroy_vm, ExitType exit_type) {
 
     // Call Thread.exit(). We try 3 times in case we got another Thread.stop during
     // the execution of the method. If that is not enough, then we don't really care. Thread.stop
-    // is deprecated anyhow.
+    // is deprecated anyhow. // todo Thread.exit()
     if (!is_Compiler_thread()) {
       int count = 3;
       while (java_lang_Thread::threadGroup(threadObj()) != NULL && (count-- > 0)) {
         EXCEPTION_MARK;
-        JavaValue result(T_VOID);
+        JavaValue result(T_VOID); // do_klass(Thread_klass, java_lang_Thread)
         KlassHandle thread_klass(THREAD, SystemDictionary::Thread_klass());
         JavaCalls::call_virtual(&result,
                               threadObj, thread_klass,
-                              vmSymbols::exit_method_name(),
+                              vmSymbols::exit_method_name(), // vmSymbols.hpp:315 template(exit_method_name,"exit")
                               vmSymbols::void_method_signature(),
                               THREAD);
         CLEAR_PENDING_EXCEPTION;
@@ -1866,7 +1866,7 @@ void JavaThread::exit(bool destroy_vm, ExitType exit_type) {
   // Notify waiters on thread object. This has to be done after exit() is called
   // on the thread (if the thread is the last thread in a daemon ThreadGroup the
   // group should have the destroyed bit set before waiters are notified).
-  ensure_join(this);
+  ensure_join(this); // JavaThread::exit  todo join exit
   assert(!this->has_pending_exception(), "ensure_join should have cleared");
 
   // 6282335 JNI DetachCurrentThread spec states that all Java monitors
@@ -3973,7 +3973,7 @@ bool Threads::destroy_vm() {
 #endif
   // Wait until we are the last non-daemon thread to execute
   { MutexLocker nu(Threads_lock);
-    while (Threads::number_of_non_daemon_threads() > 1 )
+    while (Threads::number_of_non_daemon_threads() > 1 )  // todo 非deamon线程>0
       // This wait should make safepoint checks, wait without a timeout,
       // and wait as a suspend-equivalent condition.
       //
@@ -3987,7 +3987,7 @@ bool Threads::destroy_vm() {
       Threads_lock->wait(!Mutex::_no_safepoint_check_flag, 0,
                          Mutex::_as_suspend_equivalent_flag);
   }
-
+  // todo 非deamon线程 == 0
   // Hang forever on exit if we are reporting an error.
   if (ShowMessageBoxOnError && is_error_reported()) {
     os::infinite_sleep();
