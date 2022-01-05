@@ -1817,7 +1817,7 @@ void JavaThread::exit(bool destroy_vm, ExitType exit_type) {
       int count = 3;
       while (java_lang_Thread::threadGroup(threadObj()) != NULL && (count-- > 0)) {
         EXCEPTION_MARK;
-        JavaValue result(T_VOID); // do_klass(Thread_klass, java_lang_Thread)
+        JavaValue result(T_VOID); // do_klass(Thread_klass, java_lang_Thread)  systemDictionary.hpp
         KlassHandle thread_klass(THREAD, SystemDictionary::Thread_klass());
         JavaCalls::call_virtual(&result,
                               threadObj, thread_klass,
