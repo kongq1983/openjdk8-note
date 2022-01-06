@@ -568,7 +568,7 @@ void java_lang_Class::initialize_mirror_fields(KlassHandle k,
   // Initialize static fields
   InstanceKlass::cast(k())->do_local_static_fields(&initialize_static_field, mirror, CHECK);
 }
-// classFileParser.cpp:4173
+// classFileParser.cpp:4173  类解析阶段已经初始化mirror
 void java_lang_Class::create_mirror(KlassHandle k, Handle class_loader,
                                     Handle protection_domain, TRAPS) {
   assert(k->java_mirror() == NULL, "should only assign mirror once");

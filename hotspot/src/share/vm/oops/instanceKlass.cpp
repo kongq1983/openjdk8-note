@@ -815,7 +815,7 @@ void InstanceKlass::initialize_super_interfaces(instanceKlassHandle this_oop, TR
     }
   }
 }
-
+// todo class init
 void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
   // Make sure klass is linked (verified) before initialization
   // A class could already be verified, since it has been reflected upon.
@@ -828,7 +828,7 @@ void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
   // refer to the JVM book page 47 for description of steps
   // Step 1
   {
-    oop init_lock = this_oop->init_lock();
+    oop init_lock = this_oop->init_lock();  // 同个Java类，都是同个init_lock
     ObjectLocker ol(init_lock, THREAD, init_lock != NULL);
 
     Thread *self = THREAD; // it's passed the current thread
@@ -836,8 +836,8 @@ void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
     // Step 2
     // If we were to use wait() instead of waitInterruptibly() then
     // we might end up throwing IE from link/symbol resolution sites
-    // that aren't expected to throw.  This would wreak havoc.  See 6320309.
-    while(this_oop->is_being_initialized() && !this_oop->is_reentrant_initialization(self)) {
+    // that aren't expected to throw.  This would wreak havoc.  See 6320309.  这里会发生死锁
+    while(this_oop->is_being_initialized() && !this_oop->is_reentrant_initialization(self)) {  // 不是当前线程在初始化 则进入waitUninterruptibly
         wait = true;
       ol.waitUninterruptibly(CHECK);
     }
