@@ -775,7 +775,7 @@ class WatcherThread: public Thread {
 class CompilerThread;
 
 typedef void (*ThreadFunction)(JavaThread*, TRAPS);
-
+// todo JavaThread c++
 class JavaThread: public Thread {
   friend class VMStructs;
  private:
