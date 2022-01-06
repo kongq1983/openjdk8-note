@@ -1015,7 +1015,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
          // Instead, I use release_store(), which is implemented as just a simple
          // ST on x64, x86 and SPARC.
          OrderAccess::release_store_ptr (&_owner, NULL) ;   // drop the lock 将对象锁持有者设置为空 释放锁
-         OrderAccess::storeload() ;                         // See if we need to wake a successor
+         OrderAccess::storeload() ;                         // See if we need to wake a successor    todo lock; addl $0,0(%%rsp)
          if ((intptr_t(_EntryList)|intptr_t(_cxq)) == 0 || _succ != NULL) {
             TEVENT (Inflated exit - simple egress) ;
             return ; // 如果没有其他线程竞争对象锁，直接返回
@@ -1182,7 +1182,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
 
           // Fall thru into code that tries to wake a successor from EntryList
       }
-
+      // 默认QMode=0   直接到这里
       w = _EntryList  ;  // 先处理_EntryList  QMode=0 和其他QMode类型 都会进入这里   不会到这里(QMode == 2 && _cxq != NULL)
       if (w != NULL) {  // _EntryList不为NULL ，先处理_EntryList
           // I'd like to write: guarantee (w->_thread != Self).
@@ -1211,7 +1211,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
       // The following loop is tantamount to: w = swap (&cxq, NULL) 下面的循环相当于： w = swap (&cxq, NULL)
       for (;;) {
           assert (w != NULL, "Invariant") ;
-          ObjectWaiter * u = (ObjectWaiter *) Atomic::cmpxchg_ptr (NULL, &_cxq, w) ;
+          ObjectWaiter * u = (ObjectWaiter *) Atomic::cmpxchg_ptr (NULL, &_cxq, w) ; // 把&_cxq清空
           if (u == w) break ;
           w = u ;
       }
@@ -1247,7 +1247,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
          _EntryList  = s ;
          assert (s != NULL, "invariant") ;
       } else {
-         // QMode == 0 or QMode == 2
+         // QMode == 0 or QMode == 2    默认QMode == 0 执行这里
          _EntryList = w ;
          ObjectWaiter * q = NULL ;
          ObjectWaiter * p ;
@@ -1526,7 +1526,7 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
    intptr_t save = _recursions; // record the old recursion count
    _waiters++;                  // increment the number of waiters
    _recursions = 0;             // set the recursion level to be 1
-   exit (true, Self) ;                    // todo exit the monitor 释放锁+唤醒线程------->(2)
+   exit (true, Self) ;                    // todo exit the monitor 释放锁+唤醒线程------->(2)  line:955
    guarantee (_owner != Self, "invariant") ;
 
    // The thread is on the WaitSet list - now park() it.
@@ -1548,8 +1548,8 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
 
        if (interruptible && (Thread::is_interrupted(THREAD, false) || HAS_PENDING_EXCEPTION)) {
            // Intentionally empty
-       } else // 比如notifyAll() 只能通知1个
-       if (node._notified == 0) {  //挂起自己------->(3)  没有通知（ 通知的时候 iterator->_notified = 1 ;） 上面一系列判断操作后，当线程确实加入WaitSet时，则使用park方法挂起
+       } else // 比如notifyAll() 只能通知1个   notify过来的._notified == 1
+       if (node._notified == 0) {  //_notified == 0 是自己，当时线程没有竞争，挂起自己------->(3)  没有通知（ 通知的时候 iterator->_notified = 1 ;） 上面一系列判断操作后，当线程确实加入WaitSet时，则使用park方法挂起
          if (millis <= 0) { // todo 重要关注这里
             Self->_ParkEvent->park () ;
          } else { // millis >0 有时间指定
@@ -1627,7 +1627,7 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
          // We redo the unpark() to ensure forward progress, i.e., we
          // don't want all pending threads hanging (parked) with none
          // entering the unlocked monitor.
-         node._event->unpark();
+         node._event->unpark(); // 唤醒
        }
      }
 
@@ -1689,7 +1689,7 @@ void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS) {
 }
 
 
-// Consider:
+// Consider:  todo notify
 // If the lock is cool (cxq == null && succ == null) and we're on an MP system
 // then instead of transferring a thread from the WaitSet to the EntryList   然后将线程从WaitSet传输到EntryList
 // we might just dequeue a thread from the WaitSet and directly unpark() it. 我们可能只是将一个线程从WaitSet中出列，然后直接对其进行unparak（）。
@@ -1702,10 +1702,10 @@ void ObjectMonitor::notify(TRAPS) {
   }
   DTRACE_MONITOR_PROBE(notify, this, object(), THREAD);
 
-  int Policy = Knob_MoveNotifyee ;
+  int Policy = Knob_MoveNotifyee ;  // notify默认2    wait默认0
 
   Thread::SpinAcquire (&_WaitSetLock, "WaitSet - notify") ;
-  ObjectWaiter * iterator = DequeueWaiter() ; //通过DequeueWaiter获取_WaitSet列表中的第一个ObjectWaiter
+  ObjectWaiter * iterator = DequeueWaiter() ; //通过DequeueWaiter获取_WaitSet列表中的第一个ObjectWaiter  line:2346
   if (iterator != NULL) {
      TEVENT (Notify1 - Transfer) ;
      guarantee (iterator->TState == ObjectWaiter::TS_WAIT, "invariant") ;
@@ -1713,7 +1713,7 @@ void ObjectMonitor::notify(TRAPS) {
      if (Policy != 4) {
         iterator->TState = ObjectWaiter::TS_ENTER ;
      }
-     iterator->_notified = 1 ;
+     iterator->_notified = 1 ;   // todo 通知notify标志位1
      Thread * Self = THREAD;
      iterator->_notifier_tid = Self->osthread()->thread_id();
 
@@ -1753,15 +1753,15 @@ void ObjectMonitor::notify(TRAPS) {
      } else
      if (Policy == 2) {      // prepend to cxq   默认策略2   _EntryList队列为空就放入_EntryList，   否则放入_cxq队列的排头位置
          // prepend to cxq
-         if (List == NULL) {
+         if (List == NULL) { // 策略2时： List为空时  List = _EntryList
              iterator->_next = iterator->_prev = NULL ;
-             _EntryList = iterator ;
+             _EntryList = iterator ;  // _EntryList为空，直接放到_EntryList位置上
          } else {
             iterator->TState = ObjectWaiter::TS_CXQ ;
             for (;;) {
                 ObjectWaiter * Front = _cxq ;
-                iterator->_next = Front ;
-                if (Atomic::cmpxchg_ptr (iterator, &_cxq, Front) == Front) {
+                iterator->_next = Front ;  // 相当于把iterator放到_cxq的前置节点,下面把iterator放到&_cxq的首地址  iterator.next是_cxq
+                if (Atomic::cmpxchg_ptr (iterator, &_cxq, Front) == Front) { // (intptr_t exchange_value, volatile intptr_t* dest, intptr_t compare_value)
                     break ;
                 }
             }

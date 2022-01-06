@@ -144,8 +144,8 @@ inline intptr_t Atomic::xchg_ptr(intptr_t exchange_value, volatile intptr_t* des
 inline jlong    Atomic::cmpxchg    (jlong    exchange_value, volatile jlong*    dest, jlong    compare_value) {
   bool mp = os::is_MP();
   __asm__ __volatile__ (LOCK_IF_MP(%4) "cmpxchgq %1,(%3)"
-                        : "=a" (exchange_value)
-                        : "r" (exchange_value), "a" (compare_value), "r" (dest), "r" (mp)
+                        : "=a" (exchange_value) //%0
+                        : "r" (exchange_value) , "a" (compare_value), "r" (dest), "r" (mp) // (exchange_value)=%1  a=%2  (dest)=%3
                         : "cc", "memory");
   return exchange_value;
 }
