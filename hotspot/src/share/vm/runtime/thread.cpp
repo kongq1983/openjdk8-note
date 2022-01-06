@@ -456,7 +456,7 @@ void Thread::set_priority(Thread* thread, ThreadPriority priority) {
   (void)os::set_priority(thread, priority);
 }
 
-
+// todo thread.start
 void Thread::start(Thread* thread) {
   trace("start", thread);
   // Start is different from resume in that its safety is guaranteed by context or
@@ -470,7 +470,7 @@ void Thread::start(Thread* thread) {
       java_lang_Thread::set_thread_status(((JavaThread*)thread)->threadObj(),
                                           java_lang_Thread::RUNNABLE);
     }
-    os::start_thread(thread);
+    os::start_thread(thread); // todo thread.start  os.cpp:768
   }
 }
 
@@ -1561,7 +1561,7 @@ void JavaThread::block_if_vm_exited() {
 
 // Remove this ifdef when C1 is ported to the compiler interface.
 static void compiler_thread_entry(JavaThread* thread, TRAPS);
-
+// todo thread
 JavaThread::JavaThread(ThreadFunction entry_point, size_t stack_sz) :
   Thread()
 #if INCLUDE_ALL_GCS
@@ -1574,13 +1574,13 @@ JavaThread::JavaThread(ThreadFunction entry_point, size_t stack_sz) :
   }
   initialize();
   _jni_attach_state = _not_attaching_via_jni;
-  set_entry_point(entry_point);
+  set_entry_point(entry_point);  // todo thread 以后研究这个
   // Create the native thread itself.
   // %note runtime_23
   os::ThreadType thr_type = os::java_thread;
   thr_type = entry_point == &compiler_thread_entry ? os::compiler_thread :
                                                      os::java_thread;
-  os::create_thread(this, thr_type, stack_sz);
+  os::create_thread(this, thr_type, stack_sz);  // todo thread 创建系统线程   os_linux.cpp:833
   // The _osthread may be NULL here because we ran out of memory (too many threads active).
   // We need to throw and OutOfMemoryError - however we cannot do this here because the caller
   // may hold a lock and all locks must be unlocked before throwing the exception (throwing
@@ -1631,7 +1631,7 @@ JavaThread::~JavaThread() {
   if (_thread_stat != NULL) delete _thread_stat;
 }
 
-
+// todo thread start
 // The first routine called by a new Java thread
 void JavaThread::run() {
   // initialize thread-local alloc buffer related fields

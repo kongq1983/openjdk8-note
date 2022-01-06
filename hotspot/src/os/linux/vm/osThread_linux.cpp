@@ -27,7 +27,7 @@
 #include "runtime/osThread.hpp"
 
 #include <signal.h>
-
+// todo thread create
 void OSThread::pd_initialize() {
   assert(this != NULL, "check");
   _thread_id        = 0;
@@ -38,11 +38,11 @@ void OSThread::pd_initialize() {
   _alt_sig_stack = NULL;
 
   sigemptyset(&_caller_sigmask);
-
-  _startThread_lock = new Monitor(Mutex::event, "startThread_lock", true);
+    // todo thread create monitor
+  _startThread_lock = new Monitor(Mutex::event, "startThread_lock", true); // mutex.hpp : 178
   assert(_startThread_lock !=NULL, "check");
 }
 
 void OSThread::pd_destroy() {
-  delete _startThread_lock;
+  delete _startThread_lock; // 释放Monitor
 }

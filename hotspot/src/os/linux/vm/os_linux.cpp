@@ -769,7 +769,7 @@ static bool _thread_safety_check(Thread* thread) {
     return true;
   }
 }
-
+// todo thread start
 // Thread start routine for all newly created threads
 static void *java_start(Thread *thread) {
   // Try to randomize the cache line index of hot stack frames.
@@ -810,7 +810,7 @@ static void *java_start(Thread *thread) {
   // initialize floating point control register
   os::Linux::init_thread_fpu_state();
 
-  // handshaking with parent thread
+  // handshaking with parent thread 与父线程握手
   {
     MutexLockerEx ml(sync, Mutex::_no_safepoint_check_flag);
 
@@ -829,12 +829,12 @@ static void *java_start(Thread *thread) {
 
   return 0;
 }
-
+// todo thread create
 bool os::create_thread(Thread* thread, ThreadType thr_type, size_t stack_size) {
   assert(thread->osthread() == NULL, "caller responsible");
 
   // Allocate the OSThread object
-  OSThread* osthread = new OSThread(NULL, NULL);
+  OSThread* osthread = new OSThread(NULL, NULL);  // todo thread create  osThread.cpp:31
   if (osthread == NULL) {
     return false;
   }
@@ -845,13 +845,13 @@ bool os::create_thread(Thread* thread, ThreadType thr_type, size_t stack_size) {
   // Initial state is ALLOCATED but not INITIALIZED
   osthread->set_state(ALLOCATED);
 
-  thread->set_osthread(osthread);
+  thread->set_osthread(osthread);  // todo JavaThread绑定OSThread
 
   // init thread attributes
   pthread_attr_t attr;
-  pthread_attr_init(&attr);
-  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);  // 所以java线程都是分离状态，join也并非用结合状态
-
+  pthread_attr_init(&attr); // 在任何一个时间点上，线程是可结合的（joinable），或者是分离的（detached） 一个可结合的线程能够被其他线程收回其资源和杀死 在被其他线程回收之前，它的存储器资源（如栈）是不释放的
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);  // 所以java线程都是分离状态，join也并非用结合状态  (相反，一个分离的线程是不能被其他线程回收或杀死的，它的存储器资源在它终止时由系统自动释放。)
+    //
   // stack size
   if (os::Linux::supports_variable_stack_size()) {
     // calculate stack size if it's not specified by caller
@@ -863,7 +863,7 @@ bool os::create_thread(Thread* thread, ThreadType thr_type, size_t stack_size) {
         // Java threads use ThreadStackSize which default value can be
         // changed with the flag -Xss
         assert (JavaThread::stack_size_at_create() > 0, "this should be set");
-        stack_size = JavaThread::stack_size_at_create();
+        stack_size = JavaThread::stack_size_at_create();  // JavaThread这里获取堆栈大小
         break;
       case os::compiler_thread:
         if (CompilerThreadStackSize > 0) {
@@ -881,7 +881,7 @@ bool os::create_thread(Thread* thread, ThreadType thr_type, size_t stack_size) {
     }
 
     stack_size = MAX2(stack_size, os::Linux::min_stack_allowed);
-    pthread_attr_setstacksize(&attr, stack_size);
+    pthread_attr_setstacksize(&attr, stack_size);  // 设置堆栈
   } else {
     // let pthread_create() pick the default value.
   }
@@ -899,11 +899,11 @@ bool os::create_thread(Thread* thread, ThreadType thr_type, size_t stack_size) {
     }
 
     pthread_t tid; // 创建线程  重点java_start方法
-    int ret = pthread_create(&tid, &attr, (void* (*)(void*)) java_start, thread);
+    int ret = pthread_create(&tid, &attr, (void* (*)(void*)) java_start, thread); // todo thread create
 
     pthread_attr_destroy(&attr);
 
-    if (ret != 0) {
+    if (ret != 0) { // 成功则返回0，否则返回出错编号  创建失败
       if (PrintMiscellaneous && (Verbose || WizardMode)) {
         perror("pthread_create()");
       }
@@ -918,10 +918,10 @@ bool os::create_thread(Thread* thread, ThreadType thr_type, size_t stack_size) {
     osthread->set_pthread_id(tid);
 
     // Wait until child thread is either initialized or aborted
-    {
+    { // todo thread create 等到子线程初始化或中止
       Monitor* sync_with_child = osthread->startThread_lock();
       MutexLockerEx ml(sync_with_child, Mutex::_no_safepoint_check_flag);
-      while ((state = osthread->get_state()) == ALLOCATED) {
+      while ((state = osthread->get_state()) == ALLOCATED) {  // 目前在分配中，则阻塞
         sync_with_child->wait(Mutex::_no_safepoint_check_flag);
       }
     }
@@ -1010,13 +1010,13 @@ bool os::create_attached_thread(JavaThread* thread) {
 
   return true;
 }
-
+// todo thread.start
 void os::pd_start_thread(Thread* thread) {
   OSThread * osthread = thread->osthread();
   assert(osthread->get_state() != INITIALIZED, "just checking");
-  Monitor* sync_with_child = osthread->startThread_lock();
+  Monitor* sync_with_child = osthread->startThread_lock();  // osThread_linux.cpp:42
   MutexLockerEx ml(sync_with_child, Mutex::_no_safepoint_check_flag);
-  sync_with_child->notify();
+  sync_with_child->notify(); // todo 通知线程 可以执行了   line:925 那边wait()   mutex.cpp:684  唤醒后执行java_start方法 line:774
 }
 
 // Free Linux resources related to the OSThread
@@ -5957,7 +5957,7 @@ void Parker::park(bool isAbsolute, jlong time) {
     jt->java_suspend_self();
   }
 }
-//unpark时，则简单多了，直接设置_counter为1，再unlock mutex返回。如果_counter之前的值是0，则还要调用pthread_cond_signal唤醒在park中等待的线程
+//todo unpark   unpark时，则简单多了，直接设置_counter为1，再unlock mutex返回。如果_counter之前的值是0，则还要调用pthread_cond_signal唤醒在park中等待的线程
 void Parker::unpark() {
   int s, status ;
   status = pthread_mutex_lock(_mutex); // 加锁

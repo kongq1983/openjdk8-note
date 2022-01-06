@@ -1249,7 +1249,7 @@ UNSAFE_ENTRY(void, Unsafe_Park(JNIEnv *env, jobject unsafe, jboolean isAbsolute,
   }
 UNSAFE_END
 // Unsafe_Unpark会将JavaThread的parker属性缓存到Thread实例的nativeParkEventPointer属性中，方便下次调用unpark方法时可以快速获取关联的parker，然后执行unpark方法唤醒目标线程
-UNSAFE_ENTRY(void, Unsafe_Unpark(JNIEnv *env, jobject unsafe, jobject jthread))
+UNSAFE_ENTRY(void, Unsafe_Unpark(JNIEnv *env, jobject unsafe, jobject jthread)) // todo 结论，只有在线程启动后，unpark()先于park()调用，第一个park()才不会阻塞
   UnsafeWrapper("Unsafe_Unpark");
   Parker* p = NULL;
   if (jthread != NULL) {

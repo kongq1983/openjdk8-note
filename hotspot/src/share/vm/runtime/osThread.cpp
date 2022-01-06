@@ -27,9 +27,9 @@
 #include "runtime/osThread.hpp"
 
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
-
+// todo todo create
 OSThread::OSThread(OSThreadStartFunc start_proc, void* start_parm) {
-  pd_initialize();
+  pd_initialize();  // osThread_linux.cpp:31
   set_start_proc(start_proc);
   set_start_parm(start_parm);
   set_interrupted(false);

@@ -2947,7 +2947,7 @@ static void thread_entry(JavaThread* thread, TRAPS) {
                           THREAD);
 }
 
-
+// todo thread start import
 JVM_ENTRY(void, JVM_StartThread(JNIEnv* env, jobject jthread))
   JVMWrapper("JVM_StartThread");
   JavaThread *native_thread = NULL;
@@ -2983,7 +2983,7 @@ JVM_ENTRY(void, JVM_StartThread(JNIEnv* env, jobject jthread))
       // size_t (an unsigned type), so avoid passing negative values which would
       // result in really large stacks.
       size_t sz = size > 0 ? (size_t) size : 0;
-      native_thread = new JavaThread(&thread_entry, sz);
+      native_thread = new JavaThread(&thread_entry, sz); // todo create java thread thread.cpp:1564
 
       // At this point it may be possible that no osthread was created for the
       // JavaThread due to lack of memory. Check for this situation and throw
@@ -3016,7 +3016,7 @@ JVM_ENTRY(void, JVM_StartThread(JNIEnv* env, jobject jthread))
               "unable to create new native thread");
   }
 
-  Thread::start(native_thread);
+  Thread::start(native_thread); // todo 启动线程
 
 JVM_END
 

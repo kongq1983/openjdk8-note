@@ -681,7 +681,7 @@ void Monitor::IUnlock (bool RelaxAssert) {
   }
   return ;
 }
-
+// todo monitor::notify
 bool Monitor::notify() {
   assert (_owner == Thread::current(), "invariant") ;
   assert (ILocked(), "invariant") ;
@@ -1081,7 +1081,7 @@ void Monitor::jvm_raw_unlock() {
   }
   IUnlock(false) ;
 }
-
+// todo monitor:wait
 bool Monitor::wait(bool no_safepoint_check, long timeout, bool as_suspend_equivalent) {
   Thread * const Self = Thread::current() ;
   assert (_owner == Self, "invariant") ;

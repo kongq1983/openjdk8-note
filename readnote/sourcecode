@@ -1,0 +1,10 @@
+
+
+// todo thread.start
+void os::pd_start_thread(Thread* thread) {
+  OSThread * osthread = thread->osthread();
+  assert(osthread->get_state() != INITIALIZED, "just checking");
+  Monitor* sync_with_child = osthread->startThread_lock();
+  MutexLockerEx ml(sync_with_child, Mutex::_no_safepoint_check_flag);
+  sync_with_child->notify();  // 关注这个
+}

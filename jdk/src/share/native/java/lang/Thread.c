@@ -39,7 +39,7 @@
 #define STR "Ljava/lang/String;"
 
 #define ARRAY_LENGTH(a) (sizeof(a)/sizeof(a[0]))
-
+// todo thread jni
 static JNINativeMethod methods[] = {
     {"start0",           "()V",        (void *)&JVM_StartThread},
     {"stop0",            "(" OBJ ")V", (void *)&JVM_StopThread},
