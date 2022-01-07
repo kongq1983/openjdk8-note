@@ -815,7 +815,7 @@ void InstanceKlass::initialize_super_interfaces(instanceKlassHandle this_oop, TR
     }
   }
 }
-// todo class init
+// todo class init 类初始化   clinit在这里执行的
 void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
   // Make sure klass is linked (verified) before initialization
   // A class could already be verified, since it has been reflected upon.
@@ -837,24 +837,24 @@ void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
     // If we were to use wait() instead of waitInterruptibly() then
     // we might end up throwing IE from link/symbol resolution sites
     // that aren't expected to throw.  This would wreak havoc.  See 6320309.  这里会发生死锁
-    while(this_oop->is_being_initialized() && !this_oop->is_reentrant_initialization(self)) {  // 不是当前线程在初始化 则进入waitUninterruptibly
+    while(this_oop->is_being_initialized() && !this_oop->is_reentrant_initialization(self)) {  // 不是当前线程正在初始化 则进入waitUninterruptibly
         wait = true;
-      ol.waitUninterruptibly(CHECK);
+      ol.waitUninterruptibly(CHECK); // 等待其他线程初始化完成后通知
     }
 
-    // Step 3
-    if (this_oop->is_being_initialized() && this_oop->is_reentrant_initialization(self)) {
+    // Step 3 当前类正在被当前线程正在被初始化。例如如果X类有静态变量指向new Y类实例，Y类中又有静态变量指向new X类实例 这样外部在调用X时需要初始化X类，初始化过程中又要触发Y类的初始化，而Y类初始化又再次触发X类的初始化 ???待验证
+    if (this_oop->is_being_initialized() && this_oop->is_reentrant_initialization(self)) { // 当前线程正在初始化
       DTRACE_CLASSINIT_PROBE_WAIT(recursive, InstanceKlass::cast(this_oop()), -1,wait);
       return;
     }
 
     // Step 4
-    if (this_oop->is_initialized()) {
+    if (this_oop->is_initialized()) { // 类初始化完成
       DTRACE_CLASSINIT_PROBE_WAIT(concurrent, InstanceKlass::cast(this_oop()), -1,wait);
       return;
     }
 
-    // Step 5
+    // Step 5  类的初始化出错（initialization_error状态），则抛出NoClassDefFoundError异常
     if (this_oop->is_in_error_state()) {
       DTRACE_CLASSINIT_PROBE_WAIT(erroneous, InstanceKlass::cast(this_oop()), -1,wait);
       ResourceMark rm(THREAD);
@@ -872,14 +872,14 @@ void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
     }
 
     // Step 6
-    this_oop->set_init_state(being_initialized);
-    this_oop->set_init_thread(self);
+    this_oop->set_init_state(being_initialized); // 设置类的初始化状态为being_initialized
+    this_oop->set_init_thread(self); // 设置初始化的线程为当前线程
   }
 
   // Step 7
-  Klass* super_klass = this_oop->super();
-  if (super_klass != NULL && !this_oop->is_interface() && super_klass->should_be_initialized()) {
-    super_klass->initialize(THREAD);
+  Klass* super_klass = this_oop->super();  // 父类
+  if (super_klass != NULL && !this_oop->is_interface() && super_klass->should_be_initialized()) { // 父类不为空 && 非接口 && 需要初始化
+    super_klass->initialize(THREAD); // 初始化父类
 
     if (HAS_PENDING_EXCEPTION) {
       Handle e(THREAD, PENDING_EXCEPTION);
@@ -893,11 +893,11 @@ void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
       THROW_OOP(e());
     }
   }
-
+//-------------------------------------------
   // Recursively initialize any superinterfaces that declare default methods
   // Only need to recurse if has_default_methods which includes declaring and
   // inheriting default methods
-  if (this_oop->has_default_methods()) {
+  if (this_oop->has_default_methods()) { // 接口默认方法
     this_oop->initialize_super_interfaces(this_oop, CHECK);
   }
 
@@ -914,7 +914,7 @@ void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
                              jt->get_thread_stat()->perf_recursion_counts_addr(),
                              jt->get_thread_stat()->perf_timers_addr(),
                              PerfClassTraceTime::CLASS_CLINIT);
-    this_oop->call_class_initializer(THREAD);
+    this_oop->call_class_initializer(THREAD);   // 调用类的<clinit>方法
   }
 
   // Step 9
