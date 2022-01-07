@@ -781,7 +781,7 @@ Klass* SystemDictionary::resolve_instance_class_or_null(Symbol* name,
       THROW_MSG_NULL(vmSymbols::java_lang_ClassCircularityError(), name->as_C_string());
     }
 
-    if (!class_has_been_loaded) {
+    if (!class_has_been_loaded) { // todo 未加载
 
       // Do actual loading
       k = load_instance_class(name, class_loader, THREAD);
@@ -1455,10 +1455,10 @@ instanceKlassHandle SystemDictionary::find_or_define_instance_class(Symbol* clas
 
   instanceKlassHandle nh = instanceKlassHandle(); // null Handle
   Symbol*  name_h = k->name(); // passed in class_name may be null
-  ClassLoaderData* loader_data = class_loader_data(class_loader);
+  ClassLoaderData* loader_data = class_loader_data(class_loader); // 类加载器
 
-  unsigned int d_hash = dictionary()->compute_hash(name_h, loader_data);
-  int d_index = dictionary()->hash_to_index(d_hash);
+  unsigned int d_hash = dictionary()->compute_hash(name_h, loader_data); // hash
+  int d_index = dictionary()->hash_to_index(d_hash);  // dictionary中位置
 
 // Hold SD lock around find_class and placeholder creation for DEFINE_CLASS
   unsigned int p_hash = placeholders()->compute_hash(name_h, loader_data);
@@ -1474,7 +1474,7 @@ instanceKlassHandle SystemDictionary::find_or_define_instance_class(Symbol* clas
         return(instanceKlassHandle(THREAD, check));
       }
     }
-
+    // todo  未找到Class
     // Acquire define token for this class/classloader
     probe = placeholders()->find_and_add(p_index, p_hash, name_h, loader_data, PlaceholderTable::DEFINE_CLASS, NULL, THREAD);
     // Wait if another thread defining in parallel
