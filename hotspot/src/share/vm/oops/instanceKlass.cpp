@@ -170,7 +170,7 @@ HS_DTRACE_PROBE_DECL5(hotspot, class__initialization__end,
 #endif //  ndef DTRACE_ENABLED
 
 volatile int InstanceKlass::_total_instanceKlass_count = 0;
-
+// todo InstanceKlass
 InstanceKlass* InstanceKlass::allocate_instance_klass(
                                               ClassLoaderData* loader_data,
                                               int vtable_len,
@@ -183,14 +183,14 @@ InstanceKlass* InstanceKlass::allocate_instance_klass(
                                               Klass* super_klass,
                                               bool is_anonymous,
                                               TRAPS) {
-
+    //  获取创建InstanceKlass实例时需要分配的内存空间
   int size = InstanceKlass::size(vtable_len, itable_len, nonstatic_oop_map_size,
                                  access_flags.is_interface(), is_anonymous);
 
   // Allocation
   InstanceKlass* ik;
-  if (rt == REF_NONE) {
-    if (name == vmSymbols::java_lang_Class()) {
+  if (rt == REF_NONE) { // super_klass() == NULL 非Reference
+    if (name == vmSymbols::java_lang_Class()) { // 通过 todo InstanceMirrorKlass实例表示java.lang.Class类
       ik = new (loader_data, size, THREAD) InstanceMirrorKlass(
         vtable_len, itable_len, static_field_size, nonstatic_oop_map_size, rt,
         access_flags, is_anonymous);
@@ -198,18 +198,18 @@ InstanceKlass* InstanceKlass::allocate_instance_klass(
           (SystemDictionary::ClassLoader_klass_loaded() &&
           super_klass != NULL &&
           super_klass->is_subtype_of(SystemDictionary::ClassLoader_klass()))) {
-      ik = new (loader_data, size, THREAD) InstanceClassLoaderKlass(
+      ik = new (loader_data, size, THREAD) InstanceClassLoaderKlass( // 通过InstanceClassLoaderKlass实例表示java.lang.ClassLoader或相关子类
         vtable_len, itable_len, static_field_size, nonstatic_oop_map_size, rt,
         access_flags, is_anonymous);
     } else {
       // normal class
-      ik = new (loader_data, size, THREAD) InstanceKlass(
+      ik = new (loader_data, size, THREAD) InstanceKlass( // 通过InstanceKlass实例表示普通类
         vtable_len, itable_len, static_field_size, nonstatic_oop_map_size, rt,
         access_flags, is_anonymous);
     }
   } else {
     // reference klass
-    ik = new (loader_data, size, THREAD) InstanceRefKlass(
+    ik = new (loader_data, size, THREAD) InstanceRefKlass( // 通过InstanceRefKlass实例表示引用类型
         vtable_len, itable_len, static_field_size, nonstatic_oop_map_size, rt,
         access_flags, is_anonymous);
   }
@@ -222,7 +222,7 @@ InstanceKlass* InstanceKlass::allocate_instance_klass(
 
   // Add all classes to our internal class loader list here,
   // including classes in the bootstrap (NULL) class loader.
-  loader_data->add_class(ik);
+  loader_data->add_class(ik); // add to ClassLoaderData
 
   Atomic::inc(&_total_instanceKlass_count);
   return ik;
@@ -587,7 +587,7 @@ void InstanceKlass::unlink_class() {
   assert(is_linked(), "must be linked");
   _init_state = loaded;
 }
-
+// todo k->link_class
 void InstanceKlass::link_class(TRAPS) {
   assert(is_loaded(), "must be loaded");
   if (!is_linked()) {
@@ -1354,7 +1354,7 @@ void InstanceKlass::do_local_static_fields(void f(fieldDescriptor*, Handle, TRAP
   do_local_static_fields_impl(h_this, f, mirror, CHECK);
 }
 
-
+// todo static最终处理
 void InstanceKlass::do_local_static_fields_impl(instanceKlassHandle this_k,
                              void f(fieldDescriptor* fd, Handle mirror, TRAPS), Handle mirror, TRAPS) {
   for (JavaFieldStream fs(this_k()); !fs.done(); fs.next()) {

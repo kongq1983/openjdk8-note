@@ -1,0 +1,10 @@
+
+
+User.class  = InstanceClass
+
+InstanceClass的_java_mirror持有Class的OOP
+
+user的Class = InstanceMirrorClass
+
+
+https://www.cnblogs.com/mazhimazhi/p/13467751.html

@@ -3779,7 +3779,7 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
   cfs->set_verify(_need_verify);
 
   // Save the class file name for easier error message printing.
-  _class_name = (name != NULL) ? name : vmSymbols::unknown_class_name();
+  _class_name = (name != NULL) ? name : vmSymbols::unknown_class_name(); // todo name todo classname
 
   cfs->guarantee_more(8, CHECK_(nullHandle));  // magic, major, minor
   // Magic value
@@ -4002,7 +4002,7 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
         return nullHandle;
       }
       // Make sure super class is not final
-      if (super_klass->is_final()) {
+      if (super_klass->is_final()) {  // todo 判断父类是不是final
         THROW_MSG_(vmSymbols::java_lang_VerifyError(), "Cannot inherit from final class", nullHandle);
       }
     }
@@ -4043,13 +4043,13 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
 
     // Compute reference type
     ReferenceType rt;
-    if (super_klass() == NULL) {
-      rt = REF_NONE;
+    if (super_klass() == NULL) { // 非Reference
+      rt = REF_NONE;  // todo REF_NONE
     } else {
       rt = super_klass->reference_type();
     }
 
-    // We can now create the basic Klass* for this klass
+    // We can now create the basic Klass* for this klass  todo InstanceKlass todo InstanceMirrorKlass 添加InstanceKlass InstanceMirrorKlass
     _klass = InstanceKlass::allocate_instance_klass(loader_data,
                                                     vtable_size,
                                                     itable_size,
@@ -4057,11 +4057,11 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
                                                     total_oop_map_size2,
                                                     rt,
                                                     access_flags,
-                                                    name,
+                                                    name,  // 类名包括包名
                                                     super_klass(),
                                                     !host_klass.is_null(),
                                                     CHECK_(nullHandle));
-    instanceKlassHandle this_klass (THREAD, _klass);
+    instanceKlassHandle this_klass (THREAD, _klass); // REF_NONE的时候是_klass = InstanceMirrorKlass
 
     assert(this_klass->static_field_size() == info.static_field_size, "sanity");
     assert(this_klass->nonstatic_oop_map_count() == info.total_oop_map_count,
@@ -4135,7 +4135,7 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
       this_klass->set_has_miranda_methods(); // then set a flag
     }
 
-    // Fill in information needed to compute superclasses.
+    // Fill in information needed to compute superclasses. 父类
     this_klass->initialize_supers(super_klass(), CHECK_(nullHandle));
 
     // Initialize itable offset tables
@@ -4168,10 +4168,10 @@ instanceKlassHandle ClassFileParser::parseClassFile(Symbol* name,
         check_illegal_static_method(this_klass, CHECK_(nullHandle));
       }
     }
-
+    // mirror是instanceOop对象，而mirror->klass()就是InstanceMirrorKlass*类型
     // Allocate mirror and initialize static fields  处理  java_lang_Class::create_mirror:572
-    java_lang_Class::create_mirror(this_klass, class_loader, protection_domain,
-                                   CHECK_(nullHandle));
+    java_lang_Class::create_mirror(this_klass, class_loader, protection_domain, // todo REF_NONE的时候是_klass = InstanceMirrorKlass = this_klass
+                                   CHECK_(nullHandle));  //调用这个方法 到时候 已经k->java_mirror()设置过了
 
     // Generate any default methods - default methods are interface methods
     // that have a default implementation.  This is new with Lambda project.

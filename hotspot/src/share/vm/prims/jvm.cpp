@@ -1975,7 +1975,7 @@ static bool select_method(methodHandle method, bool want_constructor) {
     return  (!method->is_initializer() && !method->is_overpass());
   }
 }
-
+// todo method
 static jobjectArray get_class_declared_methods_helper(
                                   JNIEnv *env,
                                   jclass ofClass, jboolean publicOnly, // ofClass = Method.class
@@ -1991,7 +1991,7 @@ static jobjectArray get_class_declared_methods_helper(
     oop res = oopFactory::new_objArray(klass, 0, CHECK_NULL);
     return (jobjectArray) JNIHandles::make_local(env, res);
   }
-
+  // resolve_non_null = oop result = *(oop*)handle; // 得到真正对象
   instanceKlassHandle k(THREAD, java_lang_Class::as_Klass(JNIHandles::resolve_non_null(ofClass)));
 
   // Ensure class is linked
@@ -2044,13 +2044,13 @@ static jobjectArray get_class_declared_methods_helper(
 
   return (jobjectArray) JNIHandles::make_local(env, result());
 }
-
+// todo 根据ofClass得到methods
 JVM_ENTRY(jobjectArray, JVM_GetClassDeclaredMethods(JNIEnv *env, jclass ofClass, jboolean publicOnly))
 {
   JVMWrapper("JVM_GetClassDeclaredMethods");
   return get_class_declared_methods_helper(env, ofClass, publicOnly,
                                            /*want_constructor*/ false,
-                                           SystemDictionary::reflect_Method_klass(), THREAD);
+                                           SystemDictionary::reflect_Method_klass(), THREAD); // line:1979
 }
 JVM_END
 
