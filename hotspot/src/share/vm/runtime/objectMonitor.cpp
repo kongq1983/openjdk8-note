@@ -950,7 +950,7 @@ void ObjectMonitor::UnlinkAfterAcquire (Thread * Self, ObjectWaiter * SelfNode)
 // any one time.  (more precisely, we want to minimize timer-seconds, which is
 // the integral of the # of active timers at any instant over time).
 // Both impinge on OS scalability.  Given that, at most one thread parked on
-// a monitor will use a timer.
+// a monitor will use a timer.  // todo monitorexit
 // todo exit 在获取锁时，是将当前线程插入到cxq的头部，而释放锁时，默认策略（Knob_ExitPolicy=0）  重量级锁释放也是这里(synchronizer.cpp:218)
 void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
    Thread * Self = THREAD ;
@@ -1014,7 +1014,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
          // in massive wasteful coherency traffic on classic SMP systems.
          // Instead, I use release_store(), which is implemented as just a simple
          // ST on x64, x86 and SPARC.
-         OrderAccess::release_store_ptr (&_owner, NULL) ;   // drop the lock 将对象锁持有者设置为空 释放锁
+         OrderAccess::release_store_ptr (&_owner, NULL) ;   // drop the lock 将对象锁持有者设置为空 释放锁   *p = v
          OrderAccess::storeload() ;                         // See if we need to wake a successor    todo lock; addl $0,0(%%rsp)
          if ((intptr_t(_EntryList)|intptr_t(_cxq)) == 0 || _succ != NULL) {
             TEVENT (Inflated exit - simple egress) ;

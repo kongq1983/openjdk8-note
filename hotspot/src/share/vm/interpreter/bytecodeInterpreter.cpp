@@ -677,13 +677,13 @@ BytecodeInterpreter::run(interpreterState istate) {
         }
       }
 #endif // HACK
-
+      // todo synchronized
       // Lock method if synchronized.
       if (METHOD->is_synchronized()) {  //方法上有synchronized
         // oop rcvr = locals[0].j.r;
         oop rcvr;
         if (METHOD->is_static()) { //是static 方法  //根据当前常量池所属的Klass实例获取加载该Klass实例
-          rcvr = METHOD->constants()->pool_holder()->java_mirror();
+          rcvr = METHOD->constants()->pool_holder()->java_mirror(); // 取java_mirror
         } else { // 非static方法
           rcvr = LOCALS_OBJECT(0);
           VERIFY_OOP(rcvr);
@@ -758,8 +758,8 @@ BytecodeInterpreter::run(interpreterState istate) {
         }
 
         // Traditional lightweight locking.
-        if (!success) {
-          markOop displaced = rcvr->mark()->set_unlocked();
+        if (!success) { // todo success感觉是如果有重入，则是success=true，可以释放了则success=false ?? 有待验证
+          markOop displaced = rcvr->mark()->set_unlocked(); // 无锁
           mon->lock()->set_displaced_header(displaced);
           bool call_vm = UseHeavyMonitors;
           if (call_vm || Atomic::cmpxchg_ptr(mon, rcvr->mark_addr(), displaced) != displaced) {
@@ -1908,7 +1908,7 @@ run:
         }
       }
         // 1. todo synchronized 退出 偏向锁的释放很简单，只要将对应Lock Record释放就好了   2. 而轻量级锁则需要将Displaced Mark Word替换到对象头的mark word中 3. 如果CAS失败或者是重量级锁则进入到InterpreterRuntime::monitorexit方法中
-      CASE(_monitorexit): {
+      CASE(_monitorexit): { // todo monitorexit
         oop lockee = STACK_OBJECT(-1); // lockee 就是锁对象
         CHECK_NULL(lockee);
         // derefing's lockee ought to provoke implicit null check
@@ -1918,13 +1918,13 @@ run:
         while (most_recent != limit ) { // 从低往高遍历栈的Lock Record
           if ((most_recent)->obj() == lockee) { // 如果Lock Record关联的是该锁对象
             BasicLock* lock = most_recent->lock();
-            markOop header = lock->displaced_header();
+            markOop header = lock->displaced_header(); //
             most_recent->set_obj(NULL); //释放Lock Record
             if (!lockee->mark()->has_bias_pattern()) {   // 这里是非偏向模式才进来  如果是偏向模式，仅仅释放Lock Record就好了。否则要走轻量级锁or重量级锁的释放流程
               bool call_vm = UseHeavyMonitors; //这里是非偏向模式才进来
               // If it isn't recursive we either must swap old header or call the runtime
               if (header != NULL || call_vm) { // header!=NULL说明不是重入，则需要将Displaced Mark Word CAS到对象头的Mark Word
-                if (call_vm || Atomic::cmpxchg_ptr(header, lockee->mark_addr(), lock) != lock) {
+                if (call_vm || Atomic::cmpxchg_ptr(header, lockee->mark_addr(), lock) != lock) { // 使用重量级锁  或者  cas失败
                   // restore object for the slow case
                   most_recent->set_obj(lockee); // CAS失败或者是重量级锁则会走到这里，先将obj还原，然后调用monitorexit方法
                   CALL_VM(InterpreterRuntime::monitorexit(THREAD, most_recent), handle_exception);

@@ -100,7 +100,7 @@
 class BasicLock;
 class ObjectMonitor;
 class JavaThread;
-
+// todo oop
 class markOopDesc: public oopDesc {
  private:
   // Conversion
@@ -225,7 +225,7 @@ class markOopDesc: public oopDesc {
   // Special temporary state of the markOop while being inflated.
   // Code that looks at mark outside a lock need to take this into account.
   bool is_being_inflated() const { return (value() == 0); }
-
+    // todo INFLATING()=0
   // Distinguished markword value - used when inflating over 可分辨的标记字值 - 在膨胀时使用
   // an existing stacklock.  0 indicates the markword is "BUSY".  // 一个现有的堆栈锁。 0 表示标记字为“BUSY”
   // Lockword mutators that use a LD...CAS idiom should always  使用 LD...CAS 惯用语的锁字修改器应该总是
@@ -268,13 +268,13 @@ class markOopDesc: public oopDesc {
   // WARNING: The following routines are used EXCLUSIVELY by
   // synchronization functions. They are not really gc safe.
   // They must get updated if markOop layout get changed.
-  markOop set_unlocked() const {
-    return markOop(value() | unlocked_value); // unlocked_value=1
+  markOop set_unlocked() const { // todo unlock
+    return markOop(value() | unlocked_value); // unlocked_value=1   这里应该排除GC和偏向锁
   }
   bool has_locker() const { // 轻量级锁
     return ((value() & lock_mask_in_place) == locked_value); // locked_value=0
   }
-  BasicLock* locker() const { // 偏向锁
+  BasicLock* locker() const { //todo locker 轻量级锁  其实就是markword的地址
     assert(has_locker(), "check");
     return (BasicLock*) value();
   }
