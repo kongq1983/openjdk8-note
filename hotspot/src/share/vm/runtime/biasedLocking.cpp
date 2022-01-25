@@ -338,7 +338,7 @@ static BiasedLocking::Condition bulk_revoke_or_rebias_at_safepoint(oop o,
   Klass* k_o = o->klass();
   Klass* klass = k_o;
 
-  if (bulk_rebias) { // 允许重偏向
+  if (bulk_rebias) { // 允许重偏向    HR_BULK_REBIAS
     // Use the epoch in the klass of the object to implicitly revoke
     // all biases of objects of this data type and force them to be
     // reacquired. However, we also need to walk the stacks of all
@@ -351,7 +351,7 @@ static BiasedLocking::Condition bulk_revoke_or_rebias_at_safepoint(oop o,
     // implicitly cause all existing biases to be revoked
     if (klass->prototype_header()->has_bias_pattern()) {  // 已偏向
       int prev_epoch = klass->prototype_header()->bias_epoch();
-      klass->set_prototype_header(klass->prototype_header()->incr_bias_epoch()); // 新的epoch
+      klass->set_prototype_header(klass->prototype_header()->incr_bias_epoch()); // 新的epoch incr_bias_epoch
       int cur_epoch = klass->prototype_header()->bias_epoch(); // 上面设置的 新的klass的epoch
 
       // Now walk all threads' stacks and adjust epochs of any biased // 现在遍历所有线程的堆栈并调整epochs of any biased
@@ -649,7 +649,7 @@ void BiasedLocking::revoke_at_safepoint(Handle h_obj) {
     revoke_bias(obj, false, false, NULL);
   } else if ((heuristics == HR_BULK_REBIAS) ||
              (heuristics == HR_BULK_REVOKE)) {
-    bulk_revoke_or_rebias_at_safepoint(obj, (heuristics == HR_BULK_REBIAS), false, NULL);
+    bulk_revoke_or_rebias_at_safepoint(obj, (heuristics == HR_BULK_REBIAS), false, NULL); // HR_BULK_REBIAS=再偏向达到20次
   }
   clean_up_cached_monitor_info();
 }
@@ -665,7 +665,7 @@ void BiasedLocking::revoke_at_safepoint(GrowableArray<Handle>* objs) {
       revoke_bias(obj, false, false, NULL);
     } else if ((heuristics == HR_BULK_REBIAS) || // HR_BULK_REBIAS = 重偏向达到20次
                (heuristics == HR_BULK_REVOKE)) { // HR_BULK_REVOKE = 偏向撤销次数达到40次
-      bulk_revoke_or_rebias_at_safepoint(obj, (heuristics == HR_BULK_REBIAS), false, NULL); // line 321
+      bulk_revoke_or_rebias_at_safepoint(obj, (heuristics == HR_BULK_REBIAS), false, NULL); // line 321  HR_BULK_REBIAS=再偏向达到20次
     }
   }
   clean_up_cached_monitor_info();

@@ -951,7 +951,7 @@ void ObjectMonitor::UnlinkAfterAcquire (Thread * Self, ObjectWaiter * SelfNode)
 // the integral of the # of active timers at any instant over time).
 // Both impinge on OS scalability.  Given that, at most one thread parked on
 // a monitor will use a timer.
-// todo 在获取锁时，是将当前线程插入到cxq的头部，而释放锁时，默认策略（Knob_ExitPolicy=0）
+// todo exit 在获取锁时，是将当前线程插入到cxq的头部，而释放锁时，默认策略（Knob_ExitPolicy=0）  重量级锁释放也是这里(synchronizer.cpp:218)
 void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
    Thread * Self = THREAD ;
    if (THREAD != _owner) { // 如果当前线程不是Monitor的所有者
@@ -976,7 +976,7 @@ void ATTR ObjectMonitor::exit(bool not_suspended, TRAPS) {
        return;
      }
    }
-   // 如果_recursions次数不为0.自减
+   // 如果_recursions次数不为0.自减  //如果当前，线程重入锁的次数，不为0，那么就重新走ObjectMonitor::exit，直到重入锁次数为0为止
    if (_recursions != 0) { // 重入次数
      _recursions--;        // this is simple recursive enter
      TEVENT (Inflated exit - recursive) ;
@@ -1322,7 +1322,7 @@ bool ObjectMonitor::ExitSuspendEquivalent (JavaThread * jSelf) {
    return jSelf->handle_special_suspend_equivalent_condition() ;
 }
 
-
+// todo 唤醒
 void ObjectMonitor::ExitEpilog (Thread * Self, ObjectWaiter * Wakee) {
    assert (_owner == Self, "invariant") ;
 

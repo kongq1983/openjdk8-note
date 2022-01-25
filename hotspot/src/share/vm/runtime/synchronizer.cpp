@@ -181,13 +181,13 @@ void ObjectSynchronizer::fast_enter(Handle obj, BasicLock* lock, bool attempt_re
 
  slow_enter (obj, lock, THREAD) ;  // 进入轻量级锁 226
 }
-// todo synchronized fast_enter  267
+// todo synchronized fast_enter  267  重量级锁释放
 void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
   assert(!object->mark()->has_bias_pattern(), "should not see bias pattern here");
-  // if displaced header is null, the previous enter is recursive enter, no-op
+  // if displaced header is null, the previous enter is recursive enter, no-op   如果displaced header为null，前一个enter是recursive enter，no-op
   markOop dhw = lock->displaced_header();
   markOop mark ;
-  if (dhw == NULL) {
+  if (dhw == NULL) {  // 说明是轻量级锁重入
      // Recursive stack-lock.  递归堆栈锁。
      // Diagnostics -- Could be: stack-locked, inflating, inflated.  诊断 -- 可能是：堆栈锁定、膨胀、膨胀。
      mark = object->mark() ;
@@ -195,26 +195,26 @@ void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
      if (mark->has_locker() && mark != markOopDesc::INFLATING()) {
         assert(THREAD->is_lock_owned((address)mark->locker()), "invariant") ;
      }
-     if (mark->has_monitor()) { // 重量级锁
+     if (mark->has_monitor()) { // 这个时候变重量级锁
         ObjectMonitor * m = mark->monitor() ;
         assert(((oop)(m->object()))->mark() == mark, "invariant") ;
-        assert(m->is_entered(THREAD), "invariant") ;
+        assert(m->is_entered(THREAD), "invariant") ; // objectMonitor.inline.hpp:29   判断当前线程是否持有重量级锁或轻量级锁
      }
      return ;
   }
-
+  // 其中之一是重量级锁，比如就1个线程持有重量级锁
   mark = object->mark() ;
 
   // If the object is stack-locked by the current thread, try to
   // swing the displaced header from the box back to the mark.
   if (mark == (markOop) lock) {
-     assert (dhw->is_neutral(), "invariant") ;
-     if ((markOop) Atomic::cmpxchg_ptr (dhw, object->mark_addr(), mark) == mark) {
+     assert (dhw->is_neutral(), "invariant") ;  // is_neutral = 如果是无锁状态  == unlocked_value  0001 无锁
+     if ((markOop) Atomic::cmpxchg_ptr (dhw, object->mark_addr(), mark) == mark) { // 通过CAS尝试将Displaced Mark Word替换回对象头，如果成功，表示锁释放成功
         TEVENT (fast_exit: release stacklock) ;
         return;
      }
   }
-
+  // //锁膨胀，调用重量级锁的释放锁方法
   ObjectSynchronizer::inflate(THREAD, object)->exit (true, THREAD) ;
 }
 
@@ -1295,7 +1295,7 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
           // The owner can't die or unwind past the lock while our INFLATING  在我们的INFLATING过程中，所有者不能死或解开锁
           // object is in the mark.  Furthermore the owner can't complete 对象在mark中。 此外所有者无法完成解锁对象
           // an unlock on the object, either.
-          markOop dmw = mark->displaced_mark_helper() ;
+          markOop dmw = mark->displaced_mark_helper() ; // todo hashcode
           assert (dmw->is_neutral(), "invariant") ;
 
           // Setup monitor fields to proper values -- prepare the monitor 将监视器字段设置为适当的值——准备监视器
