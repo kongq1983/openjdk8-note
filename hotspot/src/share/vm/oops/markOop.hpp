@@ -140,7 +140,7 @@ class markOopDesc: public oopDesc {
          cms_mask_in_place        = cms_mask << cms_shift
 #ifndef _WIN64
          ,hash_mask               = right_n_bits(hash_bits),
-         hash_mask_in_place       = (address_word)hash_mask << hash_shift
+         hash_mask_in_place       = (address_word)hash_mask << hash_shift  // hash_shift=7
 #endif
   };
 
@@ -152,7 +152,7 @@ class markOopDesc: public oopDesc {
     // These values are too big for Win64
     const static uintptr_t hash_mask = right_n_bits(hash_bits);
     const static uintptr_t hash_mask_in_place  =
-                            (address_word)hash_mask << hash_shift;
+                            (address_word)hash_mask << hash_shift; // hash_shift=7
 #endif
 
   enum { locked_value             = 0, // 0000 轻量级锁

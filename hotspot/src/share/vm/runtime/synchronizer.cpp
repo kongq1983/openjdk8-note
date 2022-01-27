@@ -168,7 +168,7 @@ static volatile int MonitorPopulation = 0 ;      // # Extant -- in circulation
 void ObjectSynchronizer::fast_enter(Handle obj, BasicLock* lock, bool attempt_rebias, TRAPS) {
  if (UseBiasedLocking) { // 判断是否开启了偏向锁
     if (!SafepointSynchronize::is_at_safepoint()) { // //如果不处于全局安全点
-      BiasedLocking::Condition cond = BiasedLocking::revoke_and_rebias(obj, attempt_rebias, THREAD); //通过revoke_and_rebias这个函数尝试获取偏向锁
+      BiasedLocking::Condition cond = BiasedLocking::revoke_and_rebias(obj, attempt_rebias, THREAD); //通过revoke_and_rebias这个函数尝试获取偏向锁 biasedLocking.cpp:529
       if (cond == BiasedLocking::BIAS_REVOKED_AND_REBIASED) { //如果是撤销与重偏向直接返回
         return;
       }
@@ -599,7 +599,7 @@ static inline intptr_t get_next_hash(Thread * Self, oop obj) {
   TEVENT (hashCode: GENERATE) ;
   return value;
 }
-// todo hashcode
+// todo hashcode    java: Object.hashcode
 intptr_t ObjectSynchronizer::FastHashCode (Thread * Self, oop obj) {
   if (UseBiasedLocking) {
     // NOTE: many places throughout the JVM do not expect a safepoint
@@ -639,36 +639,36 @@ intptr_t ObjectSynchronizer::FastHashCode (Thread * Self, oop obj) {
   // object should remain ineligible for biased locking
   assert (!mark->has_bias_pattern(), "invariant") ;
 
-  if (mark->is_neutral()) {
+  if (mark->is_neutral()) { // 无锁
     hash = mark->hash();              // this is a normal header
-    if (hash) {                       // if it has hash, just return it
+    if (hash) {                       // if it has hash, just return it  已经有hash了，直接返回
       return hash;
     }
-    hash = get_next_hash(Self, obj);  // allocate a new hash code
-    temp = mark->copy_set_hash(hash); // merge the hash code into header
+    hash = get_next_hash(Self, obj);  // allocate a new hash code   生成hashcode
+    temp = mark->copy_set_hash(hash); // merge the hash code into header  把hash放到header上 markword
     // use (machine word version) atomic operation to install the hash
-    test = (markOop) Atomic::cmpxchg_ptr(temp, obj->mark_addr(), mark);
+    test = (markOop) Atomic::cmpxchg_ptr(temp, obj->mark_addr(), mark);  // 通过cas设置markword
     if (test == mark) {
-      return hash;
+      return hash;  // 无锁cas成功设置，则返回  除了无锁，其他都要锁膨胀变为重量级锁
     }
     // If atomic operation failed, we must inflate the header
     // into heavy weight monitor. We could add more code here
     // for fast path, but it does not worth the complexity.
-  } else if (mark->has_monitor()) {
+  } else if (mark->has_monitor()) {  // 目前是重量级锁
     monitor = mark->monitor();
     temp = monitor->header();
     assert (temp->is_neutral(), "invariant") ;
     hash = temp->hash();
     if (hash) {
-      return hash;
+      return hash;  // 已有hash，则直接返回
     }
     // Skip to the following code to reduce code size
-  } else if (Self->is_lock_owned((address)mark->locker())) {
+  } else if (Self->is_lock_owned((address)mark->locker())) {  // 目前轻量级锁
     temp = mark->displaced_mark_helper(); // this is a lightweight monitor owned
     assert (temp->is_neutral(), "invariant") ;
     hash = temp->hash();              // by current thread, check if the displaced
     if (hash) {                       // header contains hash code
-      return hash;
+      return hash;  // 已有hash，则直接返回
     }
     // WARNING:
     //   The displaced header is strictly immutable.
@@ -680,14 +680,14 @@ intptr_t ObjectSynchronizer::FastHashCode (Thread * Self, oop obj) {
     // Any change to stack may not propagate to other threads
     // correctly.
   }
-
+  // 第一次生成hashcode ，在synchronized里，无论现在是，无锁、轻量级锁、重量级锁
   // Inflate the monitor to set hash code
-  monitor = ObjectSynchronizer::inflate(Self, obj);
+  monitor = ObjectSynchronizer::inflate(Self, obj);  // 锁膨胀 变重量级锁
   // Load displaced header and check it has hash code
   mark = monitor->header();
   assert (mark->is_neutral(), "invariant") ;
   hash = mark->hash();
-  if (hash == 0) {
+  if (hash == 0) { // 没有生成hash，则生成hash
     hash = get_next_hash(Self, obj);
     temp = mark->copy_set_hash(hash); // merge hash code into header
     assert (temp->is_neutral(), "invariant") ;
@@ -1319,7 +1319,7 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
           // to avoid false sharing on MP systems ...
           if (ObjectMonitor::_sync_Inflations != NULL) ObjectMonitor::_sync_Inflations->inc() ;
           TEVENT(Inflate: overwrite stacklock) ;
-          if (TraceMonitorInflation) {
+          if (TraceMonitorInflation) {  // product(bool, TraceMonitorInflation, false  默认false
             if (object->is_instance()) {
               ResourceMark rm;
               tty->print_cr("Inflating object " INTPTR_FORMAT " , mark " INTPTR_FORMAT " , type %s",
@@ -1330,7 +1330,7 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
           return m ;
       }
 
-      // CASE: neutral
+      // CASE: neutral  无锁
       // TODO-FIXME: for entry we currently inflate and then try to CAS _owner.
       // If we know we're inflating for entry it's better to inflate by swinging a
       // pre-locked objectMonitor pointer into the object header.   A successful
@@ -1345,13 +1345,13 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
       // prepare m for installation - set monitor to initial state
       m->Recycle();
       m->set_header(mark);
-      m->set_owner(NULL);
+      m->set_owner(NULL);   // 无锁
       m->set_object(object);
       m->OwnerIsThread = 1 ;
       m->_recursions   = 0 ;
       m->_Responsible  = NULL ;
       m->_SpinDuration = ObjectMonitor::Knob_SpinLimit ;       // consider: keep metastats by type/class
-
+        // markOopDesc::encode(m) =  (markOop) (m | monitor_value)
       if (Atomic::cmpxchg_ptr (markOopDesc::encode(m), object->mark_addr(), mark) != mark) {
           m->set_object (NULL) ;
           m->set_owner  (NULL) ;
