@@ -789,7 +789,7 @@ char* Universe::preferred_heap_base(size_t heap_size, size_t alignment, NARROW_O
   assert(is_ptr_aligned((char*)base, alignment), "Must be");
   return (char*)base; // also return NULL (don't care) for 32-bit VM
 }
-// todo 使用哪种分配内存的
+// todo GC 使用哪种分配内存的
 jint Universe::initialize_heap() {
 
   if (UseParallelGC) { // -XX:+UseParallelGC
