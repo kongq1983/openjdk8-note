@@ -1898,7 +1898,7 @@ void SharkTopLevelBlock::do_monitorenter() {
   check_null(lockee);
   acquire_lock(lockee->jobject_value(), EX_CHECK_FULL);
 }
-
+// todo synchroniezd exit
 void SharkTopLevelBlock::do_monitorexit() {
   pop(); // don't need this (monitors are block structured)
   release_lock(EX_CHECK_NO_CATCH);
@@ -1987,7 +1987,7 @@ void SharkTopLevelBlock::acquire_lock(Value *lockee, int exception_action) {
   builder()->SetInsertPoint(lock_acquired);
   current_state()->merge(fast_state, acquired_fast, acquired_slow);
 }
-
+// todo exit 释放锁
 void SharkTopLevelBlock::release_lock(int exception_action) {
   BasicBlock *not_recursive = function()->CreateBlock("not_recursive");
   BasicBlock *released_fast = function()->CreateBlock("released_fast");

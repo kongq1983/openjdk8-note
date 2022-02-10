@@ -988,7 +988,7 @@ void ClassLoader::copy_package_info_table(char** top, char* end) {
   _package_hash_table->copy_table(top, end, _package_hash_table);
 }
 #endif
-
+// todo 根据包名获取PackageInfo
 PackageInfo* ClassLoader::lookup_package(const char *pkgname) {
   const char *cp = strrchr(pkgname, '/');
   if (cp != NULL) {
@@ -999,7 +999,7 @@ PackageInfo* ClassLoader::lookup_package(const char *pkgname) {
   return NULL;
 }
 
-
+// todo 把当前类包名加入 _package_hash_table
 bool ClassLoader::add_package(const char *pkgname, int classpath_index, TRAPS) {
   assert(pkgname != NULL, "just checking");
   // Bootstrap loader no longer holds system loader lock obj serializing
@@ -1077,7 +1077,7 @@ objArrayOop ClassLoader::get_system_packages(TRAPS) {
   return result();
 }
 
-
+// todo 加载
 instanceKlassHandle ClassLoader::load_classfile(Symbol* h_name, TRAPS) {
   ResourceMark rm(THREAD);
   const char* class_name = h_name->as_C_string();
@@ -1120,13 +1120,13 @@ instanceKlassHandle ClassLoader::load_classfile(Symbol* h_name, TRAPS) {
     ClassFileParser parser(stream);
     ClassLoaderData* loader_data = ClassLoaderData::the_null_class_loader_data();
     Handle protection_domain;
-    TempNewSymbol parsed_name = NULL;
+    TempNewSymbol parsed_name = NULL; // todo parseClassFile
     instanceKlassHandle result = parser.parseClassFile(h_name,
                                                        loader_data,
                                                        protection_domain,
                                                        parsed_name,
                                                        context.should_verify(classpath_index),
-                                                       THREAD);
+                                                       THREAD); // 加载并解析Class文件，注意此时并未开始连接  classFileParser.cpp:3696
     if (HAS_PENDING_EXCEPTION) {
       ResourceMark rm;
       if (DumpSharedSpaces) {
@@ -1134,7 +1134,7 @@ instanceKlassHandle ClassLoader::load_classfile(Symbol* h_name, TRAPS) {
       }
       return h;
     }
-    h = context.record_result(classpath_index, e, result, THREAD);
+    h = context.record_result(classpath_index, e, result, THREAD); // 添加包名  // classLoaderExt.hpp:488
   } else {
     if (DumpSharedSpaces) {
       tty->print_cr("Preload Warning: Cannot find %s", class_name);

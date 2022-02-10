@@ -68,9 +68,9 @@ inline void oopDesc::release_set_mark(markOop m) {
 inline markOop oopDesc::cas_set_mark(markOop new_mark, markOop old_mark) {
   return (markOop) Atomic::cmpxchg_ptr(new_mark, &_mark, old_mark);
 }
-
+// todo klass
 inline Klass* oopDesc::klass() const {
-  if (UseCompressedClassPointers) {
+  if (UseCompressedClassPointers) { // 是否指针压缩
     return Klass::decode_klass_not_null(_metadata._compressed_klass);
   } else {
     return _metadata._klass;
@@ -513,7 +513,7 @@ template <class T> inline void oop_store(T* p, oop v) {
     update_barrier_set((void*)p, v, false /* release */);  // cast away type
   }
 }
-// todo cms stab 写屏障
+// todo cms stab 写屏障  todo stab
 template <class T> inline void oop_store(volatile T* p, oop v) {
   update_barrier_set_pre((T*)p, v);   // cast away volatile  写前屏障
   // Used by release_obj_field_put, so use release_store_ptr.

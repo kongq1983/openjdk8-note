@@ -825,7 +825,7 @@ static void *java_start(Thread *thread) {
   }
 
   // call one more level start routine
-  thread->run();
+  thread->run(); // JavaThread->run
 
   return 0;
 }
@@ -886,7 +886,7 @@ bool os::create_thread(Thread* thread, ThreadType thr_type, size_t stack_size) {
     // let pthread_create() pick the default value.
   }
 
-  // glibc guard page
+  // glibc guard page 栈保护区大小
   pthread_attr_setguardsize(&attr, os::Linux::default_guard_size(thr_type));
 
   ThreadState state;

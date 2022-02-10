@@ -179,7 +179,7 @@ inline oop JNIHandles::resolve_external_guard(jobject handle) {
   return result;
 };
 //
-// handle = klass()
+// handle = klass()  todo resolve_non_null
 inline oop JNIHandles::resolve_non_null(jobject handle) {
   assert(handle != NULL, "JNI handle should not be null");
   oop result = *(oop*)handle; // 得到真正对象

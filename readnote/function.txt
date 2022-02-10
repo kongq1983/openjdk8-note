@@ -10,3 +10,13 @@ if (thread->is_Java_thread())
 
 ParkEvent * ev = thread->_ParkEvent ;
 if (ev != NULL) ev->unpark() ;
+
+
+加载
+classLoader.cpp : 1081
+instanceKlassHandle ClassLoader::load_classfile
+
+
+// todo 双亲委派机制体现，只要涉及类的加载，都会调用这个函数
+// SystemDictionary.cpp:1264
+instanceKlassHandle SystemDictionary::load_instance_class(Symbol* class_name, Handle class_loader, TRAPS) {

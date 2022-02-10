@@ -258,8 +258,8 @@ size_t GenCollectedHeap::max_capacity() const {
   return res;
 }
 
-// Update the _full_collections_completed counter
-// at the end of a stop-world full GC.
+// Update the _full_collections_completed counter  更新 _full_collections_completed 计数器
+// at the end of a stop-world full GC.  在 stop-world full GC 结束时。
 unsigned int GenCollectedHeap::update_full_collections_completed() {
   MonitorLockerEx ml(FullGCCount_lock, Mutex::_no_safepoint_check_flag);
   assert(_full_collections_completed <= _total_full_collections,
@@ -561,7 +561,7 @@ void GenCollectedHeap::do_collection(bool  full, // false: YGC  true: FGC
       MetaspaceAux::verify_metrics();
       // Resize the metaspace capacity after full collections
       MetaspaceGC::compute_new_size();
-      update_full_collections_completed();
+      update_full_collections_completed(); // 会唤醒业务线程
     }
 
     // Track memory usage and detect low memory after GC finishes

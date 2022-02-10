@@ -553,7 +553,7 @@ void java_lang_Class::fixup_mirror(KlassHandle k, TRAPS) {
 }
 
 void java_lang_Class::initialize_mirror_fields(KlassHandle k,
-                                               Handle mirror,
+                                               Handle mirror, // mirror是instanceOop对象，而mirror->klass()就是InstanceMirrorKlass*类型
                                                Handle protection_domain,
                                                TRAPS) {
   // Allocate a simple java object for a lock.
@@ -568,7 +568,7 @@ void java_lang_Class::initialize_mirror_fields(KlassHandle k,
   // Initialize static fields
   InstanceKlass::cast(k())->do_local_static_fields(&initialize_static_field, mirror, CHECK);
 }
-// classFileParser.cpp:4173  类解析阶段已经初始化mirror
+// classFileParser.cpp:4173  类解析阶段已经初始化mirror   todo InstanceMirrorKlass
 void java_lang_Class::create_mirror(KlassHandle k, Handle class_loader,
                                     Handle protection_domain, TRAPS) {
   assert(k->java_mirror() == NULL, "should only assign mirror once");
@@ -581,12 +581,12 @@ void java_lang_Class::create_mirror(KlassHandle k, Handle class_loader,
   // Class_klass has to be loaded because it is used to allocate
   // the mirror.
   if (SystemDictionary::Class_klass_loaded()) { // 是否已加载
-    // Allocate mirror (java.lang.Class instance)
-    Handle mirror = InstanceMirrorKlass::cast(SystemDictionary::Class_klass())->allocate_instance(k, CHECK);
+    // Allocate mirror (java.lang.Class instance)  创建InstanceMirrorKlass mirror->kclass = InstanceMirrorKlass
+    Handle mirror = InstanceMirrorKlass::cast(SystemDictionary::Class_klass())->allocate_instance(k, CHECK); // todo 创建Class对象实例  創建InstanceMirrorKlass
 
     // Setup indirection from mirror->klass
-    if (!k.is_null()) {
-      java_lang_Class::set_klass(mirror(), k());
+    if (!k.is_null()) { // mirror() = java_class = oop    Class对象实例oop的->kclass() = InstanceMirrorKlass
+      java_lang_Class::set_klass(mirror(), k()); // line:731 java_class->metadata_field_put(_klass_offset, klass);
     }
 
     InstanceMirrorKlass* mk = InstanceMirrorKlass::cast(mirror->klass());
@@ -614,7 +614,7 @@ void java_lang_Class::create_mirror(KlassHandle k, Handle class_loader,
     } else { // todo mirror
       assert(k->oop_is_instance(), "Must be");
 
-      initialize_mirror_fields(k, mirror, protection_domain, THREAD);
+      initialize_mirror_fields(k, mirror, protection_domain, THREAD);  // 初始化静态字段  do_local_static_fields line:569
       if (HAS_PENDING_EXCEPTION) {
         // If any of the fields throws an exception like OOM remove the klass field
         // from the mirror so GC doesn't follow it after the klass has been deallocated.
@@ -631,7 +631,7 @@ void java_lang_Class::create_mirror(KlassHandle k, Handle class_loader,
 
     // Setup indirection from klass->mirror last
     // after any exceptions can happen during allocations.
-    if (!k.is_null()) {
+    if (!k.is_null()) { // 创建出表示了java.lang.Class对象的oop实例后，设置到InstanceKlass实例的_java_mirror属性中，同时也设置oop的_klass属性
       k->set_java_mirror(mirror()); // todo 设置java_mirror  import-import-import
     }
   } else {
@@ -727,7 +727,7 @@ Klass* java_lang_Class::as_Klass(oop java_class) {
   return k;
 }
 
-
+// klass=InstanceClass   java_class=java.lang.Class实例
 void java_lang_Class::set_klass(oop java_class, Klass* klass) {
   assert(java_lang_Class::is_instance(java_class), "must be a Class object");
   java_class->metadata_field_put(_klass_offset, klass);

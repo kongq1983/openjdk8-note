@@ -44,11 +44,11 @@ inline HeapWord* BlockOffsetTable::block_start(const void* addr) const {
 // BlockOffsetSharedArray inlines
 //////////////////////////////////////////////////////////////////////////
 inline size_t BlockOffsetSharedArray::index_for(const void* p) const {
-  char* pc = (char*)p;
+  char* pc = (char*)p; // 校验p在_reserved对应的内存区域范围内
   assert(pc >= (char*)_reserved.start() &&
          pc <  (char*)_reserved.end(),
          "p not in range.");
-  size_t delta = pointer_delta(pc, _reserved.start(), sizeof(char));
+  size_t delta = pointer_delta(pc, _reserved.start(), sizeof(char)); // 计算地址p对应的slot索引
   size_t result = delta >> LogN;
   assert(result < _vs.committed_size(), "bad index from address");
   return result;

@@ -147,7 +147,7 @@ const int SerializePageShiftCount = 3;
 //   hw += oop(hw)->foo();
 // works, where foo is a method (like size or scavenge) that returns the   其中 foo 是一个方法（如 size 或 scavenge），它返回对象大小
 // object size.
-class HeapWord { // todo HeapWord
+class HeapWord { // todo HeapWord  分配内存起始地址
   friend class VMStructs;
  private:
   char* i;

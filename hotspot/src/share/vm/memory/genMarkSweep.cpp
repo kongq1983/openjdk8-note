@@ -120,7 +120,7 @@ void GenMarkSweep::invoke_at_safepoint(int level, ReferenceProcessor* rp, bool c
     Generation* g = gch->get_gen(i);
     all_empty = all_empty && gch->get_gen(i)->used() == 0;
   }
-  GenRemSet* rs = gch->rem_set();
+  GenRemSet* rs = gch->rem_set(); // todo cardTable
   Generation* old_gen = gch->get_gen(level);
   // Clear/invalidate below make use of the "prev_used_regions" saved earlier.
   if (all_empty) {

@@ -355,11 +355,11 @@ public:
     return _byte_map[card_index] == clean_card_val();
   }
 
-  // Card marking array base (adjusted for heap low boundary)
+  // Card marking array base (adjusted for heap low boundary)  todo 最重要属性
   // This would be the 0th element of _byte_map, if the heap started at 0x0.
   // But since the heap starts at some higher address, this points to somewhere
   // before the beginning of the actual _byte_map.
-  jbyte* byte_map_base;
+  jbyte* byte_map_base;  // 在数据页地址和卡表项索引之间的映射中非常重要
 
   // Return true if "p" is at the start of a card.
   bool is_card_aligned(HeapWord* p) {

@@ -122,7 +122,7 @@ class Compile : public Phase {
     const TypePtr*  _adr_type;      // normalized address type
     ciField*        _field;         // relevant instance field, or null if none
     const Type*     _element;       // relevant array element type, or null if none
-    bool            _is_rewritable; // false if the memory is write-once only
+    bool            _is_rewritable; // false if the memory is write-once only   todo final
     int             _general_index; // if this is type is an instance, the general
                                     // type that this is an instance of
 
@@ -138,7 +138,7 @@ class Compile : public Phase {
     int             general_index() const { return (_general_index != 0) ? _general_index : _index; }
 
     void set_rewritable(bool z) { _is_rewritable = z; }
-    void set_field(ciField* f) {
+    void set_field(ciField* f) { // todo final
       assert(!_field,"");
       _field = f;
       if (f->is_final() || f->is_stable()) {

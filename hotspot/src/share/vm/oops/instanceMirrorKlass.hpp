@@ -30,11 +30,11 @@
 #include "runtime/handles.hpp"
 #include "utilities/macros.hpp"
 
-// An InstanceMirrorKlass is a specialized InstanceKlass for
-// java.lang.Class instances.  These instances are special because
-// they contain the static fields of the class in addition to the
-// normal fields of Class.  This means they are variable sized
-// instances and need special logic for computing their size and for
+// An InstanceMirrorKlass is a specialized InstanceKlass for InstanceMirrorKlass 是一个专门的 InstanceKlass
+// java.lang.Class instances.  These instances are special because  java.lang.Class 实例。 这些实例很特殊，因为
+// they contain the static fields of the class in addition to the  除了类的普通字段之外，它们还包含类的静态字段
+// normal fields of Class.  This means they are variable sized  这意味着它们是可变大小的
+// instances and need special logic for computing their size and for  实例，需要特殊的逻辑来计算它们的大小和
 // iteration of their oops.
 
 
@@ -68,7 +68,7 @@ class InstanceMirrorKlass: public InstanceKlass {
   static HeapWord* start_of_static_fields(oop obj) {
     return (HeapWord*)(cast_from_oop<intptr_t>(obj) + offset_of_static_fields());
   }
-
+ // todo 静态字段开始位置
   static void init_offset_of_static_fields() {
     // Cache the offset of the static fields in the Class instance
     assert(_offset_of_static_fields == 0, "once");

@@ -170,7 +170,7 @@ HS_DTRACE_PROBE_DECL5(hotspot, class__initialization__end,
 #endif //  ndef DTRACE_ENABLED
 
 volatile int InstanceKlass::_total_instanceKlass_count = 0;
-
+// todo InstanceKlass
 InstanceKlass* InstanceKlass::allocate_instance_klass(
                                               ClassLoaderData* loader_data,
                                               int vtable_len,
@@ -183,14 +183,14 @@ InstanceKlass* InstanceKlass::allocate_instance_klass(
                                               Klass* super_klass,
                                               bool is_anonymous,
                                               TRAPS) {
-
+    //  获取创建InstanceKlass实例时需要分配的内存空间
   int size = InstanceKlass::size(vtable_len, itable_len, nonstatic_oop_map_size,
                                  access_flags.is_interface(), is_anonymous);
 
   // Allocation
   InstanceKlass* ik;
-  if (rt == REF_NONE) {
-    if (name == vmSymbols::java_lang_Class()) {
+  if (rt == REF_NONE) { // super_klass() == NULL 非Reference
+    if (name == vmSymbols::java_lang_Class()) { // 通过 todo InstanceMirrorKlass实例表示java.lang.Class类
       ik = new (loader_data, size, THREAD) InstanceMirrorKlass(
         vtable_len, itable_len, static_field_size, nonstatic_oop_map_size, rt,
         access_flags, is_anonymous);
@@ -198,18 +198,18 @@ InstanceKlass* InstanceKlass::allocate_instance_klass(
           (SystemDictionary::ClassLoader_klass_loaded() &&
           super_klass != NULL &&
           super_klass->is_subtype_of(SystemDictionary::ClassLoader_klass()))) {
-      ik = new (loader_data, size, THREAD) InstanceClassLoaderKlass(
+      ik = new (loader_data, size, THREAD) InstanceClassLoaderKlass( // 通过InstanceClassLoaderKlass实例表示java.lang.ClassLoader或相关子类
         vtable_len, itable_len, static_field_size, nonstatic_oop_map_size, rt,
         access_flags, is_anonymous);
     } else {
       // normal class
-      ik = new (loader_data, size, THREAD) InstanceKlass(
+      ik = new (loader_data, size, THREAD) InstanceKlass( // 通过InstanceKlass实例表示普通类
         vtable_len, itable_len, static_field_size, nonstatic_oop_map_size, rt,
         access_flags, is_anonymous);
     }
   } else {
     // reference klass
-    ik = new (loader_data, size, THREAD) InstanceRefKlass(
+    ik = new (loader_data, size, THREAD) InstanceRefKlass( // 通过InstanceRefKlass实例表示引用类型
         vtable_len, itable_len, static_field_size, nonstatic_oop_map_size, rt,
         access_flags, is_anonymous);
   }
@@ -222,7 +222,7 @@ InstanceKlass* InstanceKlass::allocate_instance_klass(
 
   // Add all classes to our internal class loader list here,
   // including classes in the bootstrap (NULL) class loader.
-  loader_data->add_class(ik);
+  loader_data->add_class(ik); // add to ClassLoaderData
 
   Atomic::inc(&_total_instanceKlass_count);
   return ik;
@@ -587,7 +587,7 @@ void InstanceKlass::unlink_class() {
   assert(is_linked(), "must be linked");
   _init_state = loaded;
 }
-
+// todo k->link_class
 void InstanceKlass::link_class(TRAPS) {
   assert(is_loaded(), "must be loaded");
   if (!is_linked()) {
@@ -815,7 +815,7 @@ void InstanceKlass::initialize_super_interfaces(instanceKlassHandle this_oop, TR
     }
   }
 }
-// todo class init
+// todo class init 类初始化   clinit在这里执行的
 void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
   // Make sure klass is linked (verified) before initialization
   // A class could already be verified, since it has been reflected upon.
@@ -837,24 +837,24 @@ void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
     // If we were to use wait() instead of waitInterruptibly() then
     // we might end up throwing IE from link/symbol resolution sites
     // that aren't expected to throw.  This would wreak havoc.  See 6320309.  这里会发生死锁
-    while(this_oop->is_being_initialized() && !this_oop->is_reentrant_initialization(self)) {  // 不是当前线程在初始化 则进入waitUninterruptibly
+    while(this_oop->is_being_initialized() && !this_oop->is_reentrant_initialization(self)) {  // 不是当前线程正在初始化 则进入waitUninterruptibly
         wait = true;
-      ol.waitUninterruptibly(CHECK);
+      ol.waitUninterruptibly(CHECK); // 等待其他线程初始化完成后通知
     }
 
-    // Step 3
-    if (this_oop->is_being_initialized() && this_oop->is_reentrant_initialization(self)) {
+    // Step 3 当前类正在被当前线程正在被初始化。例如如果X类有静态变量指向new Y类实例，Y类中又有静态变量指向new X类实例 这样外部在调用X时需要初始化X类，初始化过程中又要触发Y类的初始化，而Y类初始化又再次触发X类的初始化 ???待验证
+    if (this_oop->is_being_initialized() && this_oop->is_reentrant_initialization(self)) { // 当前线程正在初始化
       DTRACE_CLASSINIT_PROBE_WAIT(recursive, InstanceKlass::cast(this_oop()), -1,wait);
       return;
     }
 
     // Step 4
-    if (this_oop->is_initialized()) {
+    if (this_oop->is_initialized()) { // 类初始化完成
       DTRACE_CLASSINIT_PROBE_WAIT(concurrent, InstanceKlass::cast(this_oop()), -1,wait);
       return;
     }
 
-    // Step 5
+    // Step 5  类的初始化出错（initialization_error状态），则抛出NoClassDefFoundError异常
     if (this_oop->is_in_error_state()) {
       DTRACE_CLASSINIT_PROBE_WAIT(erroneous, InstanceKlass::cast(this_oop()), -1,wait);
       ResourceMark rm(THREAD);
@@ -872,14 +872,14 @@ void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
     }
 
     // Step 6
-    this_oop->set_init_state(being_initialized);
-    this_oop->set_init_thread(self);
+    this_oop->set_init_state(being_initialized); // 设置类的初始化状态为being_initialized
+    this_oop->set_init_thread(self); // 设置初始化的线程为当前线程
   }
 
   // Step 7
-  Klass* super_klass = this_oop->super();
-  if (super_klass != NULL && !this_oop->is_interface() && super_klass->should_be_initialized()) {
-    super_klass->initialize(THREAD);
+  Klass* super_klass = this_oop->super();  // 父类
+  if (super_klass != NULL && !this_oop->is_interface() && super_klass->should_be_initialized()) { // 父类不为空 && 非接口 && 需要初始化
+    super_klass->initialize(THREAD); // 初始化父类
 
     if (HAS_PENDING_EXCEPTION) {
       Handle e(THREAD, PENDING_EXCEPTION);
@@ -893,11 +893,11 @@ void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
       THROW_OOP(e());
     }
   }
-
+//-------------------------------------------
   // Recursively initialize any superinterfaces that declare default methods
   // Only need to recurse if has_default_methods which includes declaring and
   // inheriting default methods
-  if (this_oop->has_default_methods()) {
+  if (this_oop->has_default_methods()) { // 接口默认方法
     this_oop->initialize_super_interfaces(this_oop, CHECK);
   }
 
@@ -914,7 +914,7 @@ void InstanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) {
                              jt->get_thread_stat()->perf_recursion_counts_addr(),
                              jt->get_thread_stat()->perf_timers_addr(),
                              PerfClassTraceTime::CLASS_CLINIT);
-    this_oop->call_class_initializer(THREAD);
+    this_oop->call_class_initializer(THREAD);   // 调用类的<clinit>方法
   }
 
   // Step 9
@@ -1354,7 +1354,7 @@ void InstanceKlass::do_local_static_fields(void f(fieldDescriptor*, Handle, TRAP
   do_local_static_fields_impl(h_this, f, mirror, CHECK);
 }
 
-
+// todo static最终处理
 void InstanceKlass::do_local_static_fields_impl(instanceKlassHandle this_k,
                              void f(fieldDescriptor* fd, Handle mirror, TRAPS), Handle mirror, TRAPS) {
   for (JavaFieldStream fs(this_k()); !fs.done(); fs.next()) {

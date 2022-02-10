@@ -55,11 +55,11 @@ class CMSIsAliveClosure;
 
 class PSPromotionManager;
 class ParCompactionManager;
-
+// FreeChunk的前2个字宽和普通的Java对象即OopDesc是一致的
 class oopDesc {
   friend class VMStructs;
  private:
-  volatile markOop  _mark; //标识运行时数据
+  volatile markOop  _mark; //标识运行时数据  markOop其实是markOopDesc*的别名，也是一个指针，对应于FreeChunk的size属性
   union _metadata {
     Klass*      _klass;
     narrowKlass _compressed_klass;

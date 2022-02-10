@@ -357,7 +357,7 @@ int InstanceMirrorKlass::instance_size(KlassHandle k) {
   }
   return size_helper();
 }
-// todo 堆中分配
+// todo InstanceMirrorKlass 堆中分配 InstanceMirrorKlass
 instanceOop InstanceMirrorKlass::allocate_instance(KlassHandle k, TRAPS) {
   // Query before forming handle.
   int size = instance_size(k);

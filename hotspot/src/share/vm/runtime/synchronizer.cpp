@@ -168,7 +168,7 @@ static volatile int MonitorPopulation = 0 ;      // # Extant -- in circulation
 void ObjectSynchronizer::fast_enter(Handle obj, BasicLock* lock, bool attempt_rebias, TRAPS) {
  if (UseBiasedLocking) { // 判断是否开启了偏向锁
     if (!SafepointSynchronize::is_at_safepoint()) { // //如果不处于全局安全点
-      BiasedLocking::Condition cond = BiasedLocking::revoke_and_rebias(obj, attempt_rebias, THREAD); //通过revoke_and_rebias这个函数尝试获取偏向锁
+      BiasedLocking::Condition cond = BiasedLocking::revoke_and_rebias(obj, attempt_rebias, THREAD); //通过revoke_and_rebias这个函数尝试获取偏向锁 biasedLocking.cpp:529
       if (cond == BiasedLocking::BIAS_REVOKED_AND_REBIASED) { //如果是撤销与重偏向直接返回
         return;
       }
@@ -181,13 +181,13 @@ void ObjectSynchronizer::fast_enter(Handle obj, BasicLock* lock, bool attempt_re
 
  slow_enter (obj, lock, THREAD) ;  // 进入轻量级锁 226
 }
-// todo synchronized fast_enter  267
+// todo synchronized fast_enter  267  重量级锁释放
 void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
   assert(!object->mark()->has_bias_pattern(), "should not see bias pattern here");
-  // if displaced header is null, the previous enter is recursive enter, no-op
+  // if displaced header is null, the previous enter is recursive enter, no-op   如果displaced header为null，前一个enter是recursive enter，no-op
   markOop dhw = lock->displaced_header();
   markOop mark ;
-  if (dhw == NULL) {
+  if (dhw == NULL) {  // 说明是轻量级锁重入
      // Recursive stack-lock.  递归堆栈锁。
      // Diagnostics -- Could be: stack-locked, inflating, inflated.  诊断 -- 可能是：堆栈锁定、膨胀、膨胀。
      mark = object->mark() ;
@@ -195,27 +195,27 @@ void ObjectSynchronizer::fast_exit(oop object, BasicLock* lock, TRAPS) {
      if (mark->has_locker() && mark != markOopDesc::INFLATING()) {
         assert(THREAD->is_lock_owned((address)mark->locker()), "invariant") ;
      }
-     if (mark->has_monitor()) { // 重量级锁
+     if (mark->has_monitor()) { // 这个时候变重量级锁
         ObjectMonitor * m = mark->monitor() ;
         assert(((oop)(m->object()))->mark() == mark, "invariant") ;
-        assert(m->is_entered(THREAD), "invariant") ;
+        assert(m->is_entered(THREAD), "invariant") ; // objectMonitor.inline.hpp:29   判断当前线程是否持有重量级锁或轻量级锁
      }
      return ;
   }
-
+  // 其中之一是重量级锁，比如就1个线程持有重量级锁
   mark = object->mark() ;
 
   // If the object is stack-locked by the current thread, try to
   // swing the displaced header from the box back to the mark.
   if (mark == (markOop) lock) {
-     assert (dhw->is_neutral(), "invariant") ;
-     if ((markOop) Atomic::cmpxchg_ptr (dhw, object->mark_addr(), mark) == mark) {
+     assert (dhw->is_neutral(), "invariant") ;  // is_neutral = 如果是无锁状态  == unlocked_value  0001 无锁
+     if ((markOop) Atomic::cmpxchg_ptr (dhw, object->mark_addr(), mark) == mark) { // 通过CAS尝试将Displaced Mark Word替换回对象头，如果成功，表示锁释放成功
         TEVENT (fast_exit: release stacklock) ;
         return;
      }
   }
-
-  ObjectSynchronizer::inflate(THREAD, object)->exit (true, THREAD) ;
+  // //锁膨胀，调用重量级锁的释放锁方法
+  ObjectSynchronizer::inflate(THREAD, object)->exit (true, THREAD) ; // ObjectMonitor::exit  objectMonitor.cpp:955
 }
 
 // -----------------------------------------------------------------------------
@@ -599,7 +599,7 @@ static inline intptr_t get_next_hash(Thread * Self, oop obj) {
   TEVENT (hashCode: GENERATE) ;
   return value;
 }
-// todo hashcode
+// todo hashcode    java: Object.hashcode
 intptr_t ObjectSynchronizer::FastHashCode (Thread * Self, oop obj) {
   if (UseBiasedLocking) {
     // NOTE: many places throughout the JVM do not expect a safepoint
@@ -639,36 +639,36 @@ intptr_t ObjectSynchronizer::FastHashCode (Thread * Self, oop obj) {
   // object should remain ineligible for biased locking
   assert (!mark->has_bias_pattern(), "invariant") ;
 
-  if (mark->is_neutral()) {
+  if (mark->is_neutral()) { // 无锁
     hash = mark->hash();              // this is a normal header
-    if (hash) {                       // if it has hash, just return it
+    if (hash) {                       // if it has hash, just return it  已经有hash了，直接返回
       return hash;
     }
-    hash = get_next_hash(Self, obj);  // allocate a new hash code
-    temp = mark->copy_set_hash(hash); // merge the hash code into header
+    hash = get_next_hash(Self, obj);  // allocate a new hash code   生成hashcode
+    temp = mark->copy_set_hash(hash); // merge the hash code into header  把hash放到header上 markword
     // use (machine word version) atomic operation to install the hash
-    test = (markOop) Atomic::cmpxchg_ptr(temp, obj->mark_addr(), mark);
+    test = (markOop) Atomic::cmpxchg_ptr(temp, obj->mark_addr(), mark);  // 通过cas设置markword
     if (test == mark) {
-      return hash;
+      return hash;  // 无锁cas成功设置，则返回  除了无锁，其他都要锁膨胀变为重量级锁
     }
     // If atomic operation failed, we must inflate the header
     // into heavy weight monitor. We could add more code here
     // for fast path, but it does not worth the complexity.
-  } else if (mark->has_monitor()) {
+  } else if (mark->has_monitor()) {  // 目前是重量级锁
     monitor = mark->monitor();
     temp = monitor->header();
     assert (temp->is_neutral(), "invariant") ;
     hash = temp->hash();
     if (hash) {
-      return hash;
+      return hash;  // 已有hash，则直接返回
     }
     // Skip to the following code to reduce code size
-  } else if (Self->is_lock_owned((address)mark->locker())) {
+  } else if (Self->is_lock_owned((address)mark->locker())) {  // 目前轻量级锁
     temp = mark->displaced_mark_helper(); // this is a lightweight monitor owned
     assert (temp->is_neutral(), "invariant") ;
     hash = temp->hash();              // by current thread, check if the displaced
     if (hash) {                       // header contains hash code
-      return hash;
+      return hash;  // 已有hash，则直接返回
     }
     // WARNING:
     //   The displaced header is strictly immutable.
@@ -680,14 +680,14 @@ intptr_t ObjectSynchronizer::FastHashCode (Thread * Self, oop obj) {
     // Any change to stack may not propagate to other threads
     // correctly.
   }
-
+  // 第一次生成hashcode ，在synchronized里，无论现在是，无锁、轻量级锁、重量级锁
   // Inflate the monitor to set hash code
-  monitor = ObjectSynchronizer::inflate(Self, obj);
+  monitor = ObjectSynchronizer::inflate(Self, obj);  // 锁膨胀 变重量级锁
   // Load displaced header and check it has hash code
   mark = monitor->header();
   assert (mark->is_neutral(), "invariant") ;
   hash = mark->hash();
-  if (hash == 0) {
+  if (hash == 0) { // 没有生成hash，则生成hash
     hash = get_next_hash(Self, obj);
     temp = mark->copy_set_hash(hash); // merge hash code into header
     assert (temp->is_neutral(), "invariant") ;
@@ -1198,7 +1198,7 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
           !SafepointSynchronize::is_at_safepoint(), "invariant") ;
 
   for (;;) {
-      const markOop mark = object->mark() ;
+      const markOop mark = object->mark() ; // 对象markword
       assert (!mark->has_bias_pattern(), "invariant") ;
 
       // The mark can be in one of the following states:
@@ -1209,7 +1209,7 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
       // *  BIASED       - Illegal.  We should never see this
 
       // CASE: inflated
-      if (mark->has_monitor()) {  // 已有重量级锁
+      if (mark->has_monitor()) {  // 已有重量级锁  ((value() & monitor_value) != 0); // monitor_value =2
           ObjectMonitor * inf = mark->monitor() ;
           assert (inf->header()->is_neutral(), "invariant");
           assert (inf->object() == object, "invariant") ;
@@ -1259,7 +1259,7 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
           m->_recursions   = 0 ;
           m->_SpinDuration = ObjectMonitor::Knob_SpinLimit ;   // Consider: maintain by type/class
           // cas设置重量级锁   0值是暂时的，并且*应该*是短暂的
-          markOop cmp = (markOop) Atomic::cmpxchg_ptr (markOopDesc::INFLATING(), object->mark_addr(), mark) ;
+          markOop cmp = (markOop) Atomic::cmpxchg_ptr (markOopDesc::INFLATING(), object->mark_addr(), mark) ; // todo INFLATING()=0
           if (cmp != mark) { // 失败
              omRelease (Self, m, true) ; // synchronizer.cpp  ObjectSynchronizer::omRelease:1077
              continue ;       // Interference -- just retry
@@ -1295,31 +1295,31 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
           // The owner can't die or unwind past the lock while our INFLATING  在我们的INFLATING过程中，所有者不能死或解开锁
           // object is in the mark.  Furthermore the owner can't complete 对象在mark中。 此外所有者无法完成解锁对象
           // an unlock on the object, either.
-          markOop dmw = mark->displaced_mark_helper() ;
+          markOop dmw = mark->displaced_mark_helper() ; // todo hashcode  displaced_mark_helper= ((value() & unlocked_value) == 0);
           assert (dmw->is_neutral(), "invariant") ;
 
           // Setup monitor fields to proper values -- prepare the monitor 将监视器字段设置为适当的值——准备监视器
-          m->set_header(dmw) ; // hashcode在dmw
+          m->set_header(dmw) ; // hashcode在dmw   m=ObjectMonitor
 
           // Optimization: if the mark->locker stack address is associated
           // with this thread we could simply set m->_owner = Self and
           // m->OwnerIsThread = 1. Note that a thread can inflate an object
           // that it has stack-locked -- as might happen in wait() -- directly
           // with CAS.  That is, we can avoid the xchg-NULL .... ST idiom.
-          m->set_owner(mark->locker());
-          m->set_object(object);
+          m->set_owner(mark->locker());  // 轻量级锁  locker() = markword = markword的内存地址
+          m->set_object(object);  // object 是synchronized的锁对象
           // TODO-FIXME: assert BasicLock->dhw != 0.
 
-          // Must preserve store ordering. The monitor state must
-          // be stable at the time of publishing the monitor address.
-          guarantee (object->mark() == markOopDesc::INFLATING(), "invariant") ;
-          object->release_set_mark(markOopDesc::encode(m));
-
+          // Must preserve store ordering. The monitor state must  必须保留存储顺序。 监视器状态必须
+          // be stable at the time of publishing the monitor address.  发布monitor address 时要稳定
+          guarantee (object->mark() == markOopDesc::INFLATING(), "invariant") ;  // release_set_mark(markOop m)
+          object->release_set_mark(markOopDesc::encode(m)); // markOopDesc::encode(m) = markoop     release_set_mark = OrderAccess::release_store_ptr(&_mark, m);  = (*p = v)
+            // 上面
           // Hopefully the performance counters are allocated on distinct cache lines
           // to avoid false sharing on MP systems ...
           if (ObjectMonitor::_sync_Inflations != NULL) ObjectMonitor::_sync_Inflations->inc() ;
           TEVENT(Inflate: overwrite stacklock) ;
-          if (TraceMonitorInflation) {
+          if (TraceMonitorInflation) {  // product(bool, TraceMonitorInflation, false  默认false
             if (object->is_instance()) {
               ResourceMark rm;
               tty->print_cr("Inflating object " INTPTR_FORMAT " , mark " INTPTR_FORMAT " , type %s",
@@ -1330,7 +1330,7 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
           return m ;
       }
 
-      // CASE: neutral
+      // CASE: neutral  无锁
       // TODO-FIXME: for entry we currently inflate and then try to CAS _owner.
       // If we know we're inflating for entry it's better to inflate by swinging a
       // pre-locked objectMonitor pointer into the object header.   A successful
@@ -1345,13 +1345,13 @@ ObjectMonitor * ATTR ObjectSynchronizer::inflate (Thread * Self, oop object) {
       // prepare m for installation - set monitor to initial state
       m->Recycle();
       m->set_header(mark);
-      m->set_owner(NULL);
+      m->set_owner(NULL);   // 无锁
       m->set_object(object);
       m->OwnerIsThread = 1 ;
       m->_recursions   = 0 ;
       m->_Responsible  = NULL ;
       m->_SpinDuration = ObjectMonitor::Knob_SpinLimit ;       // consider: keep metastats by type/class
-
+        // markOopDesc::encode(m) =  (markOop) (m | monitor_value)
       if (Atomic::cmpxchg_ptr (markOopDesc::encode(m), object->mark_addr(), mark) != mark) {
           m->set_object (NULL) ;
           m->set_owner  (NULL) ;
@@ -1605,7 +1605,7 @@ public:
   ReleaseJavaMonitorsClosure(Thread* thread) : THREAD(thread) {}
   void do_monitor(ObjectMonitor* mid) {
     if (mid->owner() == THREAD) {
-      (void)mid->complete_exit(CHECK);
+      (void)mid->complete_exit(CHECK); // todo Monitor cleanup on JavaThread::exit  线层退出
     }
   }
 };

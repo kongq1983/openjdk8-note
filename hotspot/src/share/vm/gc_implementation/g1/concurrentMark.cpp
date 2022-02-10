@@ -1190,7 +1190,7 @@ uint ConcurrentMark::calc_parallel_marking_threads() {
   // concurrent workers should be 0.
   return 0;
 }
-
+// todo HeapRegion
 void ConcurrentMark::scanRootRegion(HeapRegion* hr, uint worker_id) {
   // Currently, only survivors can be root regions.
   assert(hr->next_top_at_mark_start() == hr->bottom(), "invariant");

@@ -99,21 +99,21 @@ Klass* volatile SystemDictionary::_abstract_ownable_synchronizer_klass = NULL;
 
 // ----------------------------------------------------------------------------
 // Java-level SystemLoader
-
+// todo sun.misc.Launcher$AppClassLoader
 oop SystemDictionary::java_system_loader() {
   return _java_system_loader;
 }
-
+// todo _java_system_loader
 void SystemDictionary::compute_java_system_loader(TRAPS) {
   KlassHandle system_klass(THREAD, WK_KLASS(ClassLoader_klass));
-  JavaValue result(T_OBJECT);
-  JavaCalls::call_static(&result,
-                         KlassHandle(THREAD, WK_KLASS(ClassLoader_klass)),
-                         vmSymbols::getSystemClassLoader_name(),
-                         vmSymbols::void_classloader_signature(),
+  JavaValue result(T_OBJECT);// java.lang.Classloader的getSystemClassLoader()方法
+  JavaCalls::call_static(&result, // 调用Java静态方法返回的值，并将其存储在result
+                         KlassHandle(THREAD, WK_KLASS(ClassLoader_klass)), // 调用目标类java.lang.Classloader
+                         vmSymbols::getSystemClassLoader_name(), // 调用目标类目标方法java.lang.Classloader的getSystemClassLoader()方法
+                         vmSymbols::void_classloader_signature(), // 调用目标类目标方法签名
                          CHECK);
-
-  _java_system_loader = (oop)result.get_jobject();
+    // _java_system_loader=sun.misc.Launcher$AppClassLoader
+  _java_system_loader = (oop)result.get_jobject();  // 获取getSystemClassLoader()，并赋给_java_system_loader
 
   CDS_ONLY(SystemDictionaryShared::initialize(CHECK);)
 }
@@ -781,7 +781,7 @@ Klass* SystemDictionary::resolve_instance_class_or_null(Symbol* name,
       THROW_MSG_NULL(vmSymbols::java_lang_ClassCircularityError(), name->as_C_string());
     }
 
-    if (!class_has_been_loaded) {
+    if (!class_has_been_loaded) { // todo 未加载
 
       // Do actual loading
       k = load_instance_class(name, class_loader, THREAD);
@@ -1260,11 +1260,11 @@ instanceKlassHandle SystemDictionary::load_shared_class(instanceKlassHandle ik,
   return ik;
 }
 #endif // INCLUDE_CDS
-
+// todo 双亲委派机制体现，只要涉及类的加载，都会调用这个函数
 instanceKlassHandle SystemDictionary::load_instance_class(Symbol* class_name, Handle class_loader, TRAPS) {
   instanceKlassHandle nh = instanceKlassHandle(); // null Handle
   if (class_loader.is_null()) {
-
+    // 使用引导类加载器加载
     // Search the shared system dictionary for classes preloaded into the
     // shared spaces.
     instanceKlassHandle k;
@@ -1276,13 +1276,13 @@ instanceKlassHandle SystemDictionary::load_instance_class(Symbol* class_name, Ha
     }
 
     if (k.is_null()) {
-      // Use VM class loader
+      // Use VM class loader  使用引导类加载器加载
       PerfTraceTime vmtimer(ClassLoader::perf_sys_classload_time());
       k = ClassLoader::load_classfile(class_name, CHECK_(nh));
     }
 
     // find_or_define_instance_class may return a different InstanceKlass
-    if (!k.is_null()) {
+    if (!k.is_null()) { // 并行加载，也就是允许同一个类加载器同时加载多个类
       k = find_or_define_instance_class(class_name, class_loader, k, CHECK_(nh));
     }
     return k;
@@ -1455,10 +1455,10 @@ instanceKlassHandle SystemDictionary::find_or_define_instance_class(Symbol* clas
 
   instanceKlassHandle nh = instanceKlassHandle(); // null Handle
   Symbol*  name_h = k->name(); // passed in class_name may be null
-  ClassLoaderData* loader_data = class_loader_data(class_loader);
+  ClassLoaderData* loader_data = class_loader_data(class_loader); // 类加载器
 
-  unsigned int d_hash = dictionary()->compute_hash(name_h, loader_data);
-  int d_index = dictionary()->hash_to_index(d_hash);
+  unsigned int d_hash = dictionary()->compute_hash(name_h, loader_data); // hash
+  int d_index = dictionary()->hash_to_index(d_hash);  // dictionary中位置
 
 // Hold SD lock around find_class and placeholder creation for DEFINE_CLASS
   unsigned int p_hash = placeholders()->compute_hash(name_h, loader_data);
@@ -1474,7 +1474,7 @@ instanceKlassHandle SystemDictionary::find_or_define_instance_class(Symbol* clas
         return(instanceKlassHandle(THREAD, check));
       }
     }
-
+    // todo  未找到Class
     // Acquire define token for this class/classloader
     probe = placeholders()->find_and_add(p_index, p_hash, name_h, loader_data, PlaceholderTable::DEFINE_CLASS, NULL, THREAD);
     // Wait if another thread defining in parallel

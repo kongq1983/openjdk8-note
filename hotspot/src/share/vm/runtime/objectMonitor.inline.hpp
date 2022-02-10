@@ -24,9 +24,9 @@
 
 #ifndef SHARE_VM_RUNTIME_OBJECTMONITOR_INLINE_HPP
 #define SHARE_VM_RUNTIME_OBJECTMONITOR_INLINE_HPP
-
+// todo 判断当前线程是否持有重量级锁或轻量级锁
 inline intptr_t ObjectMonitor::is_entered(TRAPS) const {
-  if (THREAD == _owner || THREAD->is_lock_owned((address) _owner)) {
+  if (THREAD == _owner || THREAD->is_lock_owned((address) _owner)) { // objectMonitor.inline.hpp:29
     return 1;
   }
   return 0;

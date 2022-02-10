@@ -34,7 +34,7 @@ class OopsInGenClosure;
 
 // This kind of "GenRemSet" uses a card table both as shared data structure
 // for a mod ref barrier set and for the rem set information.
-
+// 卡表只能粗粒度表示某个对象中的引用域地址所在的页
 class CardTableRS: public GenRemSet {
   friend class VMStructs;
   // Below are private classes used in impl.
@@ -53,7 +53,7 @@ class CardTableRS: public GenRemSet {
   card_is_dirty_wrt_gen_iter(jbyte cv) {
     return CardTableModRefBS::card_is_dirty_wrt_gen_iter(cv);
   }
-
+  // 屏障，继承自BarrierSet
   CardTableModRefBSForCTRS* _ct_bs;
 
   virtual void younger_refs_in_space_iterate(Space* sp, OopsInGenClosure* cl);
