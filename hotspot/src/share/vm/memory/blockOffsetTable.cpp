@@ -35,15 +35,15 @@
 //////////////////////////////////////////////////////////////////////
 // BlockOffsetSharedArray
 //////////////////////////////////////////////////////////////////////
-
+// //具体调用是传入的reserved实际是某个Generation的内存区域，init_word_size是初始的Generation内存大小
 BlockOffsetSharedArray::BlockOffsetSharedArray(MemRegion reserved,
                                                size_t init_word_size):
   _reserved(reserved), _end(NULL)
 {
-  size_t size = compute_size(reserved.word_size());
+  size_t size = compute_size(reserved.word_size()); //计算对应的slot个数，按照一个slot对应一个字节，计算所需要的内存
   ReservedSpace rs(size);
   if (!rs.is_reserved()) {
-    vm_exit_during_initialization("Could not reserve enough space for heap offset array");
+    vm_exit_during_initialization("Could not reserve enough space for heap offset array"); // //申请内存失败
   }
 
   MemTracker::record_virtual_memory_type((address)rs.base(), mtGC);
@@ -52,7 +52,7 @@ BlockOffsetSharedArray::BlockOffsetSharedArray(MemRegion reserved,
     vm_exit_during_initialization("Could not reserve enough space for heap offset array");
   }
   _offset_array = (u_char*)_vs.low_boundary();
-  resize(init_word_size);
+  resize(init_word_size);// new_word_size对应Generation新的内存大小
   if (TraceBlockOffsetTable) {
     gclog_or_tty->print_cr("BlockOffsetSharedArray::BlockOffsetSharedArray: ");
     gclog_or_tty->print_cr("  "
@@ -67,15 +67,15 @@ BlockOffsetSharedArray::BlockOffsetSharedArray(MemRegion reserved,
                   p2i(_vs.high_boundary()));
   }
 }
-
+// new_word_size对应Generation新的内存大小
 void BlockOffsetSharedArray::resize(size_t new_word_size) {
   assert(new_word_size <= _reserved.word_size(), "Resize larger than reserved");
-  size_t new_size = compute_size(new_word_size);
-  size_t old_size = _vs.committed_size();
+  size_t new_size = compute_size(new_word_size); // 计算new_word_size对应的slot所需的内存
+  size_t old_size = _vs.committed_size(); // //获取已经分配的内存
   size_t delta;
   char* high = _vs.high();
-  _end = _reserved.start() + new_word_size;
-  if (new_size > old_size) {
+  _end = _reserved.start() + new_word_size; // 更新end
+  if (new_size > old_size) { // 如果需要扩容，将需要扩展的内存做内存对齐
     delta = ReservedSpace::page_align_size_up(new_size - old_size);
     assert(delta > 0, "just checking");
     if (!_vs.expand_by(delta)) {
@@ -83,7 +83,7 @@ void BlockOffsetSharedArray::resize(size_t new_word_size) {
       vm_exit_out_of_memory(delta, OOM_MMAP_ERROR, "offset table expansion");
     }
     assert(_vs.high() == high + delta, "invalid expansion");
-  } else {
+  } else { // 如果需要缩容
     delta = ReservedSpace::page_align_size_down(old_size - new_size);
     if (delta == 0) return;
     _vs.shrink_by(delta);
@@ -112,7 +112,7 @@ BlockOffsetArray::BlockOffsetArray(BlockOffsetSharedArray* array,
   if (!init_to_zero_) {
     // initialize cards to point back to mr.start()
     set_remainder_to_point_to_start(mr.start() + N_words, mr.end());
-    _array->set_offset_array(0, 0);  // set first card to 0
+    _array->set_offset_array(0, 0);  // set first card to 0  //将第一个slot设置为0
   }
 }
 
@@ -185,20 +185,20 @@ BlockOffsetArray::set_remainder_to_point_to_start_incl(size_t start_card, size_t
   assert(start_card > _array->index_for(_bottom), "Cannot be first card");
   assert(_array->offset_array(start_card-1) <= N_words,
     "Offset card has an unexpected value");
-  size_t start_card_for_region = start_card;
-  u_char offset = max_jubyte;
+  size_t start_card_for_region = start_card; //max_jubyte表示无符号的byte类型的最大值，即-1
+  u_char offset = max_jubyte; // N_powers是枚举，值为14
   for (int i = 0; i < N_powers; i++) {
     // -1 so that the the card with the actual offset is counted.  Another -1
     // so that the reach ends in this region and not at the start
     // of the next.
-    size_t reach = start_card - 1 + (power_to_cards_back(i+1) - 1);
-    offset = N_words + i;
-    if (reach >= end_card) {
-      _array->set_offset_array(start_card_for_region, end_card, offset, reducing);
+    size_t reach = start_card - 1 + (power_to_cards_back(i+1) - 1); //这里有两个-1，第一个是保证start_card包含在里面，第二个是保证end_card不会是下一个区域的start
+    offset = N_words + i; //注意offset是大于或者等于N_words
+    if (reach >= end_card) {  //如果reach超过end_card
+      _array->set_offset_array(start_card_for_region, end_card, offset, reducing);  //将start_card_for_region和reach范围的slot的值都设置为指定值
       start_card_for_region = reach + 1;
       break;
     }
-    _array->set_offset_array(start_card_for_region, reach, offset, reducing);
+    _array->set_offset_array(start_card_for_region, reach, offset, reducing);  //将start_card_for_region和reach范围的slot的值都设置为指定值
     start_card_for_region = reach + 1;
   }
   assert(start_card_for_region > end_card, "Sanity check");

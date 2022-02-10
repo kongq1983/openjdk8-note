@@ -93,11 +93,11 @@ protected:
 
   // Together, these keep <object with a preserved mark, mark value> pairs.
   // They should always contain the same number of elements.
-  Stack<oop, mtGC>     _objs_with_preserved_marks;
-  Stack<markOop, mtGC> _preserved_marks_of_objs;
+  Stack<oop, mtGC>     _objs_with_preserved_marks;  // todo 记录promotion失败需要被保留的oop，如果对象头中包含锁，分代年龄等非初始化状态的信息，则需要单独保留，否则无法恢复
+  Stack<markOop, mtGC> _preserved_marks_of_objs; // todo 记录promotion晋升失败需要被保留的对象头
 
   // Promotion failure handling
-  ExtendedOopClosure *_promo_failure_scan_stack_closure;
+  ExtendedOopClosure *_promo_failure_scan_stack_closure; // todo 用来遍历_promo_failure_scan_stack中的oop所引用的其他对象
   void set_promo_failure_scan_stack_closure(ExtendedOopClosure *scan_stack_closure) {
     _promo_failure_scan_stack_closure = scan_stack_closure;
   }

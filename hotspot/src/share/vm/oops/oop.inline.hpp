@@ -513,7 +513,7 @@ template <class T> inline void oop_store(T* p, oop v) {
     update_barrier_set((void*)p, v, false /* release */);  // cast away type
   }
 }
-// todo cms stab 写屏障
+// todo cms stab 写屏障  todo stab
 template <class T> inline void oop_store(volatile T* p, oop v) {
   update_barrier_set_pre((T*)p, v);   // cast away volatile  写前屏障
   // Used by release_obj_field_put, so use release_store_ptr.

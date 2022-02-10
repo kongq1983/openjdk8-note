@@ -99,7 +99,7 @@ public:
 //////////////////////////////////////////////////////////////////////////
 // BlockOffsetSharedArray
 //////////////////////////////////////////////////////////////////////////
-class BlockOffsetSharedArray: public CHeapObj<mtGC> {
+class BlockOffsetSharedArray: public CHeapObj<mtGC> { // BlockOffsetSharedArray是表示老年代的CardGeneration的实例属性
   friend class BlockOffsetArray;
   friend class BlockOffsetArrayNonContigSpace;
   friend class BlockOffsetArrayContigSpace;
@@ -108,23 +108,23 @@ class BlockOffsetSharedArray: public CHeapObj<mtGC> {
  private:
   enum SomePrivateConstants {
     LogN = 9,
-    LogN_words = LogN - LogHeapWordSize,
-    N_bytes = 1 << LogN,
-    N_words = 1 << LogN_words
+    LogN_words = LogN - LogHeapWordSize, // LogHeapWordSize = 3
+    N_bytes = 1 << LogN, // 512 byte ( 1 << 9)
+    N_words = 1 << LogN_words // 64字，也就是512byte (N_words表示一个slot对应的字宽数，一个字宽是8字节)  N_words的值就是2^5=64
   };
 
   bool _init_to_zero;
-
-  // The reserved region covered by the shared array.
+  // 对应的整个Java堆内存区域
+  // The reserved region covered by the shared array.  与当前偏移表对应的所有卡表页组成的区域，是一个连续的区域
   MemRegion _reserved;
 
-  // End of the current committed region.
+  // End of the current committed region.  已经提交的内存区域的尾地址
   HeapWord* _end;
 
   // Array for keeping offsets for retrieving object start fast given an
-  // address.
+  // address.  _offset_array需要的虚拟空间    _reserved区域对应slot的内存空间
   VirtualSpace _vs;
-  u_char* _offset_array;          // byte array keeping backwards offsets
+  u_char* _offset_array;          // byte array keeping backwards offsets 字节数组，用来保存回退偏移的相关信息   实际值是_vs的基地址，是一个用来保存offset的数组
 
  protected:
   // Bounds checking accessors:
@@ -140,7 +140,7 @@ class BlockOffsetSharedArray: public CHeapObj<mtGC> {
     check_reducing_assertion(reducing);
     assert(index < _vs.committed_size(), "index out of range");
     assert(!reducing || _offset_array[index] >= offset, "Not reducing");
-    _offset_array[index] = offset;
+    _offset_array[index] = offset; //将index处的slot设置为offset
   }
 
   void set_offset_array(size_t index, HeapWord* high, HeapWord* low, bool reducing = false) {
@@ -150,7 +150,7 @@ class BlockOffsetSharedArray: public CHeapObj<mtGC> {
     assert(pointer_delta(high, low) <= N_words, "offset too large");
     assert(!reducing || _offset_array[index] >=  (u_char)pointer_delta(high, low),
            "Not reducing");
-    _offset_array[index] = (u_char)pointer_delta(high, low);
+    _offset_array[index] = (u_char)pointer_delta(high, low); //pointer_delta(high, low)就是用来计算偏移量的
   }
 
   void set_offset_array(HeapWord* left, HeapWord* right, u_char offset, bool reducing = false) {
@@ -158,7 +158,7 @@ class BlockOffsetSharedArray: public CHeapObj<mtGC> {
     assert(index_for(right - 1) < _vs.committed_size(),
            "right address out of range");
     assert(left  < right, "Heap addresses out of order");
-    size_t num_cards = pointer_delta(right, left) >> LogN_words;
+    size_t num_cards = pointer_delta(right, left) >> LogN_words; //计算起始地址对应的slot个数
 
     // Below, we may use an explicit loop instead of memset()
     // because on certain platforms memset() can give concurrent
@@ -166,16 +166,16 @@ class BlockOffsetSharedArray: public CHeapObj<mtGC> {
     if (UseMemSetInBOT) {
       memset(&_offset_array[index_for(left)], offset, num_cards);
     } else {
-      size_t i = index_for(left);
+      size_t i = index_for(left); //获取起始地址对应的起始slot的index
       const size_t end = i + num_cards;
-      for (; i < end; i++) {
+      for (; i < end; i++) { //使用循环遍历的方式将指定范围的slot设置为指定值
         // Elided until CR 6977974 is fixed properly.
         // assert(!reducing || _offset_array[i] >= offset, "Not reducing");
         _offset_array[i] = offset;
       }
     }
   }
-
+  //同上，不过left和right已经是换算过的slot的索引了
   void set_offset_array(size_t left, size_t right, u_char offset, bool reducing = false) {
     check_reducing_assertion(reducing);
     assert(right < _vs.committed_size(), "right address out of range");
@@ -215,9 +215,9 @@ class BlockOffsetSharedArray: public CHeapObj<mtGC> {
   // offset array slot, so we want that slot always
   // to be reserved.
 
-  size_t compute_size(size_t mem_region_words) {
-    size_t number_of_slots = (mem_region_words / N_words) + 1;
-    return ReservedSpace::allocation_align_size_up(number_of_slots);
+  size_t compute_size(size_t mem_region_words) { // N_words的值就是2^5=64   N_bytes表示一个slot对应的字节数，2^9等于512字节
+    size_t number_of_slots = (mem_region_words / N_words) + 1; // N_words表示一个slot对应的字宽数，是一个枚举值
+    return ReservedSpace::allocation_align_size_up(number_of_slots); // 一个slot对应一个字节，allocation_align_size_up方法用于内存对齐
   }
 
 public:

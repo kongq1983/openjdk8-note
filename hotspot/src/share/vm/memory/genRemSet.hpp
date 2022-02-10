@@ -45,11 +45,11 @@ class KlassRemSet {
   bool mod_union_is_clear();
   void clear_mod_union();
 };
-
+// GenRemSet 唯一子类 CardTableRs
 class GenRemSet: public CHeapObj<mtGC> {
   friend class Generation;
 
-  BarrierSet* _bs;
+  BarrierSet* _bs; // 屏障 当对象改变引用，或者从新生代->老年代时，这个屏障可能会标记卡表中的某一项为dirty
   KlassRemSet _klass_rem_set;
 
 public:

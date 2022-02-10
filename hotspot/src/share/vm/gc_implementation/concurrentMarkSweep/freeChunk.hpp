@@ -53,13 +53,13 @@
 // set when the chunk is allocated. There are also blocks that "look free"
 // but are not part of the free list and should not be coalesced into larger
 // free blocks. These free blocks have their two LSB's set.
-
+// FreeChunk也是位于老年代的堆内存中，怎么跟正常的Java对象区分了？如果是32位或者64位下不开启UseCompressedOops则通过prev字段的地址最后一位来标识，如果是64位下开启UseCompressedOops则通过size字段来标识
 class FreeChunk VALUE_OBJ_CLASS_SPEC {
   friend class VMStructs;
   // For 64 bit compressed oops, the markOop encodes both the size and the
   // indication that this is a FreeChunk and not an object.
-  volatile size_t   _size;
-  FreeChunk* _prev;
+  volatile size_t   _size; // 如果是64位下开启UseCompressedOops则通过size字段来标识
+  FreeChunk* _prev; // 如果是32位或者64位下不开启UseCompressedOops则通过prev字段的地址最后一位来标识
   FreeChunk* _next;
 
   markOop mark()     const volatile { return (markOop)_size; }
@@ -69,7 +69,7 @@ class FreeChunk VALUE_OBJ_CLASS_SPEC {
   NOT_PRODUCT(static const size_t header_size();)
 
   // Returns "true" if the address indicates that the block represents
-  // a free chunk.
+  // a free chunk. //根据addr判断这是否是一个FreeChunk，如果是返回true
   static bool indicatesFreeChunk(const HeapWord* addr) {
     // Force volatile read from addr because value might change between
     // calls.  We really want the read of _mark and _prev from this pointer
@@ -86,12 +86,12 @@ class FreeChunk VALUE_OBJ_CLASS_SPEC {
     assert(is_free(), "can't get coalesce bit on not free");
     return (((intptr_t)_prev) & 0x2) == 0x2;
   }
-  void dontCoalesce() {
+  void dontCoalesce() { //dontCoalesce用于标记当前FreeChunk不支持合并成一个更大的FreeChunk
     // the block should be free
     assert(is_free(), "Should look like a free block");
-    _prev = (FreeChunk*)(((intptr_t)_prev) | 0x2);
-  }
-  FreeChunk* prev() const {
+    _prev = (FreeChunk*)(((intptr_t)_prev) | 0x2); //| 0x2将prev地址的倒数第二位置为1
+  } // 第二个字宽，_metadata对应于_prev。在64位下开启指针压缩的条件下，都读取第一个字宽的数据，在32位或者64位下不开启指针压缩时都读取第二个字宽的数据，然后根据特殊的位来判断是否是FreeChunk
+  FreeChunk* prev() const { //& ~(0x3)实际就是把ptr地址的最后两位换成0，最后一位表示是否是FreeChunk，倒数第二位用于表示该FreeChunk不能执行合并
     return (FreeChunk*)(((intptr_t)_prev) & ~(0x3));
   }
 
@@ -99,7 +99,7 @@ class FreeChunk VALUE_OBJ_CLASS_SPEC {
   debug_only(void* next_addr() const { return (void*)&_next; })
   debug_only(void* size_addr() const { return (void*)&_size; })
 
-  size_t size() const volatile {
+  size_t size() const volatile { //size属性的读写
     LP64_ONLY(if (UseCompressedOops) return mark()->get_size(); else )
     return _size;
   }
@@ -115,12 +115,12 @@ class FreeChunk VALUE_OBJ_CLASS_SPEC {
     if (ptr != NULL) ptr->link_prev(this);
   }
   void link_next(FreeChunk* ptr) { _next = ptr; }
-  void link_prev(FreeChunk* ptr) {
+  void link_prev(FreeChunk* ptr) { //prev属性的读写，|0x1就是将ptr地址的最后一位变成1，ptr因为需要按照内存页对齐，所以ptr通常最后的N位都是0，N位取决于内存页的大小
     LP64_ONLY(if (UseCompressedOops) _prev = ptr; else)
     _prev = (FreeChunk*)((intptr_t)ptr | 0x1);
   }
   void clear_next()              { _next = NULL; }
-  void markNotFree() {
+  void markNotFree() { //将FreeChunk标记为非Free
     // Set _prev (klass) to null before (if) clearing the mark word below
     _prev = NULL;
 #ifdef _LP64

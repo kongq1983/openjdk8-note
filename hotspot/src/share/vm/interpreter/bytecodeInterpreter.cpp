@@ -1995,12 +1995,12 @@ run:
             CHECK_NULL(obj);
           }
 
-          //
+          // 现在将结果存储在堆栈中
           // Now store the result on the stack
           //
           TosState tos_type = cache->flag_state();
           int field_offset = cache->f2_as_index();
-          if (cache->is_volatile()) {
+          if (cache->is_volatile()) { // todo volatile = true
             if (support_IRIW_for_not_multiple_copy_atomic_cpu) {
               OrderAccess::fence();
             }
@@ -2024,7 +2024,7 @@ run:
               SET_STACK_DOUBLE(obj->double_field_acquire(field_offset), 0);
               MORE_STACK(1);
             }
-          } else {
+          } else { // todo volatile = false
             if (tos_type == atos) {
               VERIFY_OOP(obj->obj_field(field_offset));
               SET_STACK_OBJECT(obj->obj_field(field_offset), -1);
@@ -2101,20 +2101,20 @@ run:
           if (tos_type == ltos || tos_type == dtos) {
             --count;
           }
-          if ((Bytecodes::Code)opcode == Bytecodes::_putstatic) {
+          if ((Bytecodes::Code)opcode == Bytecodes::_putstatic) { // static
             Klass* k = cache->f1_as_klass();
             obj = k->java_mirror();
-          } else {
+          } else { // not static
             --count;
             obj = (oop) STACK_OBJECT(count);
             CHECK_NULL(obj);
           }
 
-          //
-          // Now store the result
+          // todo set field
+          // Now store the result 现在存储结果(其实就是set)
           //
           int field_offset = cache->f2_as_index();
-          if (cache->is_volatile()) {
+          if (cache->is_volatile()) { // todo volatile=true
             if (tos_type == itos) {
               obj->release_int_field_put(field_offset, STACK_INT(-1));
             } else if (tos_type == atos) {
@@ -2134,7 +2134,7 @@ run:
               obj->release_double_field_put(field_offset, STACK_DOUBLE(-1));
             }
             OrderAccess::storeload();
-          } else {
+          } else { // todo volatile=false
             if (tos_type == itos) {
               obj->int_field_put(field_offset, STACK_INT(-1));
             } else if (tos_type == atos) {

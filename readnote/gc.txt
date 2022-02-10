@@ -61,3 +61,17 @@ jvm 源码: https://blog.csdn.net/FoolishAndStupid/article/details/77822827
 
 jvm文章
 https://www.cmsblogs.com/?p=15628
+
+
+https://blog.csdn.net/qq_31865983/article/details/103897364
+ N_words的值就是2^5=64   N_bytes表示一个slot对应的字节数，2^9等于512字节
+cardTable
+generation.hpp : 624
+genRemSet.hpp
+cardTableRS.hpp
+blockOffsetTable.hpp : 102
+cardTableModRefBS.hpp 屏障 (byte_map_base)  卡表屏障类似于java的aop 前置、后置
+
+
+内存;
+freeChunk.hpp
