@@ -302,9 +302,9 @@ void ContiguousSpace::initialize(MemRegion mr,
 }
 
 void ContiguousSpace::clear(bool mangle_space) {
-  set_top(bottom());
-  set_saved_mark();
-  CompactibleSpace::clear(mangle_space);
+  set_top(bottom()); // _top = _bottom
+  set_saved_mark(); // _saved_mark_word = _top = _bottom
+  CompactibleSpace::clear(mangle_space); // _compaction_top = _bottom;
 }
 
 bool ContiguousSpace::is_free_block(const HeapWord* p) const {

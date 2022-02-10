@@ -921,7 +921,7 @@ JVM_ENTRY(jclass, JVM_FindClassFromCaller(JNIEnv* env, const char* name,
   Handle h_loader(THREAD, loader_oop);
   Handle h_prot(THREAD, protection_domain);
   jclass result = find_class_from_class_loader(env, h_name, init, h_loader,
-                                               h_prot, false, THREAD);
+                                               h_prot, false, THREAD); // 4094
 
   if (TraceClassResolution && result != NULL) {
     trace_class_resolution(java_lang_Class::as_Klass(JNIHandles::resolve_non_null(result)));
@@ -4100,13 +4100,13 @@ jclass find_class_from_class_loader(JNIEnv* env, Symbol* name, jboolean init,
   //   the checkPackageAccess relative to the initiating class loader via the
   //   protection_domain. The protection_domain is passed as NULL by the java code
   //   if there is no security manager in 3-arg Class.forName().
-  Klass* klass = SystemDictionary::resolve_or_fail(name, loader, protection_domain, throwError != 0, CHECK_NULL);
+  Klass* klass = SystemDictionary::resolve_or_fail(name, loader, protection_domain, throwError != 0, CHECK_NULL); // todo create instanceClass
 
   KlassHandle klass_handle(THREAD, klass);
   // Check if we should initialize the class
   if (init && klass_handle->oop_is_instance()) {
     klass_handle->initialize(CHECK_NULL);
-  }
+  } // // todo create instanceMirrorClass
   return (jclass) JNIHandles::make_local(env, klass_handle->java_mirror());
 }
 

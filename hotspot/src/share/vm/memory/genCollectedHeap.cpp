@@ -348,11 +348,11 @@ bool GenCollectedHeap::should_do_concurrent_full_gc(GCCause::Cause cause) {
           (cause == GCCause::_java_lang_system_gc && ExplicitGCInvokesConcurrent));
 }
 // todo gc
-void GenCollectedHeap::do_collection(bool  full,
-                                     bool   clear_all_soft_refs, // clear_all_soft_refs参数表示是否要回收sort reference
+void GenCollectedHeap::do_collection(bool  full, // false: YGC  true: FGC
+                                     bool   clear_all_soft_refs, // clear_all_soft_refs参数表示是否要回收soft reference
                                      size_t size, // GC发生是因为发送了"Allocate Fail"，这个size就代表了申请分配的内存大小
                                      bool   is_tlab,
-                                     int    max_level) { // YoungGen或者OldGen
+                                     int    max_level) { // YoungGen或者OldGen  0 or 1
   bool prepared_for_verification = false;
   ResourceMark rm;
   DEBUG_ONLY(Thread* my_thread = Thread::current();)
@@ -381,7 +381,7 @@ void GenCollectedHeap::do_collection(bool  full,
 
   {
     FlagSetting fl(_is_gc_active, true);
-
+    // 只有在执行FGC的时候，complete的值才为true
     bool complete = full && (max_level == (n_gens()-1)); // complete表示是否收集整个堆
     const char* gc_cause_prefix = complete ? "Full GC" : "GC";
     gclog_or_tty->date_stamp(PrintGC && PrintGCDateStamps);
@@ -410,7 +410,7 @@ void GenCollectedHeap::do_collection(bool  full,
     bool must_restore_marks_for_biased_locking = false;
 
     int max_level_collected = starting_level;
-    for (int i = starting_level; i <= max_level; i++) {
+    for (int i = starting_level; i <= max_level; i++) { // 对于YGC来说starting_level=0  对于FGC来说starting_level=1
       if (_gens[i]->should_collect(full, size, is_tlab)) {
         if (i == n_gens() - 1) {  // a major collection is to happen
           if (!complete) {
@@ -477,7 +477,7 @@ void GenCollectedHeap::do_collection(bool  full,
           // from GCH). XXX
 
           HandleMark hm;  // Discard invalid handles created during gc
-          save_marks();   // save marks for all gens
+          save_marks();   // save marks for all gens 为_saved_mark_word变量赋值为碰撞指针_top的值
           // We want to discover references, but not process them yet.
           // This mode is disabled in process_discovered_references if the
           // generation does some collection work, or in
@@ -493,7 +493,7 @@ void GenCollectedHeap::do_collection(bool  full,
           } else {
             // collect() below will enable discovery as appropriate
           }
-          _gens[i]->collect(full, do_clear_all_soft_refs, size, is_tlab);
+          _gens[i]->collect(full, do_clear_all_soft_refs, size, is_tlab); // 执行真正的垃圾回收工作
           if (!rp->enqueuing_is_done()) {
             rp->enqueue_discovered_references();
           } else {
@@ -1080,7 +1080,7 @@ bool GenCollectedHeap::is_maximal_no_gc() const {
   }
   return true;
 }
-
+// todo save_marks
 void GenCollectedHeap::save_marks() {
   for (int i = 0; i < _n_gens; i++) {
     _gens[i]->save_marks();

@@ -323,7 +323,7 @@ void DefNewGeneration::compute_space_boundaries(uintx minimum_eden_size,
 // todo 分配内存　　form 和　to 交换
 void DefNewGeneration::swap_spaces() {
   ContiguousSpace* s = from();
-  _from_space        = to(); // 交换了　form 和 to的起始地址
+  _from_space        = to(); // 交换 form 和 to的首地址
   _to_space          = s;
   eden()->set_next_compaction_space(from()); // 设置eden下一片需要压缩的区域为现在的from区
   // The to-space is normally empty before a compaction so need
@@ -597,8 +597,8 @@ void DefNewGeneration::collect(bool   full,
   IsAliveClosure is_alive(this);
   ScanWeakRefClosure scan_weak_ref(this);
 
-  age_table()->clear();
-  to()->clear(SpaceDecorator::Mangle);
+  age_table()->clear(); // 清空ageTable
+  to()->clear(SpaceDecorator::Mangle);  // 清空to空间
 
   gch->rem_set()->prepare_for_younger_refs_iterate(false);
   // //标记所有内存代当前分配对象存储空间的起始位置
@@ -648,8 +648,8 @@ void DefNewGeneration::collect(bool   full,
 
   if (!_promotion_failed) { // 当前内存代(年青代)在本次Gc过程中没有发生对象升级失败
     // Swap the survivor spaces. SpaceDecorator::Mangle  Eden/From区清零
-    eden()->clear(SpaceDecorator::Mangle);
-    from()->clear(SpaceDecorator::Mangle);
+    eden()->clear(SpaceDecorator::Mangle); // 清空eden空间
+    from()->clear(SpaceDecorator::Mangle); // 清空from空间
     if (ZapUnusedHeapArea) {
       // This is now done here because of the piece-meal mangling which
       // can check for valid mangling at intermediate points in the
@@ -660,11 +660,11 @@ void DefNewGeneration::collect(bool   full,
       // other spaces.
       to()->mangle_unused_area();
     }
-    swap_spaces(); //交换From/To区
+    swap_spaces(); //交换From/To区  YGC无论成功失败都会调用swap_spaces(这里是成功)
 
     assert(to()->is_empty(), "to space should be empty now");
 
-    adjust_desired_tenuring_threshold(); // 重新计算对象可进入下一个内存代的存活时间阈值
+    adjust_desired_tenuring_threshold(); // 重新计算对象可进入下一个内存代的存活时间阈值_tenuring_threshold(每次YGC的时候，都会计算一次)
 
     // A successful scavenge should restart the GC time limit count which is
     // for full GC's.
@@ -675,7 +675,7 @@ void DefNewGeneration::collect(bool   full,
     }
     assert(!gch->incremental_collection_failed(), "Should be clear");
   } else { //当前内存代(年青代)在本次Gc过程中发生了对象升级失败(年老代没有足够的空闲空间来容纳从年青代转存储过来的active对象)
-    assert(_promo_failure_scan_stack.is_empty(), "post condition");
+    assert(_promo_failure_scan_stack.is_empty(), "post condition"); // 这里是YGC失败，下面会触发FGC
     _promo_failure_scan_stack.clear(true); // Clear cached segments.
 
     remove_forwarding_pointers();
@@ -687,7 +687,7 @@ void DefNewGeneration::collect(bool   full,
     // case there can be live objects in to-space
     // as a result of a partial evacuation of eden
     // and from-space.
-    swap_spaces();   // For uniformity wrt ParNewGeneration.
+    swap_spaces();   // For uniformity wrt ParNewGeneration. 交换From/To区  YGC无论成功失败都会调用swap_spaces(这里是失败)
     from()->set_next_compaction_space(to()); // 设置From区下一个可压缩内存区为To区,以便在下一次的Full Gc中压缩调整
     gch->set_incremental_collection_failed();
 
@@ -759,7 +759,7 @@ void DefNewGeneration::preserve_mark_if_necessary(oop obj, markOop m) {
     preserve_mark(obj, m);
   }
 }
-
+// 晋升失败
 void DefNewGeneration::handle_promotion_failure(oop old) {
   if (PrintPromotionFailure && !_promotion_failed) {
     gclog_or_tty->print(" (promotion failure size = " SIZE_FORMAT ") ",
@@ -767,16 +767,16 @@ void DefNewGeneration::handle_promotion_failure(oop old) {
   }
   _promotion_failed = true;
   _promotion_failed_info.register_copy_failure(old->size());
-  preserve_mark_if_necessary(old, old->mark());
-  // forward to self
+  preserve_mark_if_necessary(old, old->mark()); // 保存原对象头
+  // forward to self  转发指针指向自己
   old->forward_to(old);
 
-  _promo_failure_scan_stack.push(old);
+  _promo_failure_scan_stack.push(old); // 晋升失败对象，添加到_promo_failure_scan_stack
 
   if (!_promo_failure_drain_in_progress) {
     // prevent recursion in copy_to_survivor_space()
     _promo_failure_drain_in_progress = true;
-    drain_promo_failure_scan_stack();
+    drain_promo_failure_scan_stack(); // 当前对象晋升失败时，当前对象所引用的对象，仍然要进行标记扫描并进行复制操作
     _promo_failure_drain_in_progress = false;
   }
 }
@@ -784,44 +784,44 @@ void DefNewGeneration::handle_promotion_failure(oop old) {
 oop DefNewGeneration::copy_to_survivor_space(oop old) {
   assert(is_in_reserved(old) && !old->is_forwarded(),
          "shouldn't be scavenging this oop");
-  size_t s = old->size();
+  size_t s = old->size(); // 旧对象的大小
   oop obj = NULL;
 
   // Try allocating obj in to-space (unless too old)
-  if (old->age() < tenuring_threshold()) {
-    obj = (oop) to()->allocate_aligned(s);
+  if (old->age() < tenuring_threshold()) { // 没达到老年代的年龄(还是在新生代分配-to空间分配)
+    obj = (oop) to()->allocate_aligned(s); // 如果对象的年龄低于tenuring_threshold，则该在to区申请一块同样大小的内存
   }
 
   // Otherwise try allocating obj tenured
-  if (obj == NULL) {
-    obj = _next_gen->promote(old, s);
-    if (obj == NULL) {
+  if (obj == NULL) { // //如果如果对象的年龄大于tenuring_threshold或者to区申请内存失败
+    obj = _next_gen->promote(old, s); // 则尝试将该对象复制到老年代
+    if (obj == NULL) { //老年代复制失败
       handle_promotion_failure(old);
       return old;
     }
   } else {
-    // Prefetch beyond obj
+    // Prefetch beyond obj   to区中申请内存成功
     const intx interval = PrefetchCopyIntervalInBytes;
     Prefetch::write(obj, interval);
 
-    // Copy obj
+    // Copy obj  对象复制
     Copy::aligned_disjoint_words((HeapWord*)old, (HeapWord*)obj, s);
 
     // Increment age if obj still in new generation
-    obj->incr_age();
-    age_table()->add(obj, s);
+    obj->incr_age(); // 增加年龄，增加对应年龄的总对象大小 注意此处是增加复制对象而非原来对象的分代年龄
+    age_table()->add(obj, s); // 并修改age_table
   }
 
   // Done, insert forward pointer to obj in this header
-  old->forward_to(obj);
+  old->forward_to(obj); // //将对象头指针指向新地址
 
   return obj;
 }
-
+// todo _promo_failure_scan_stack
 void DefNewGeneration::drain_promo_failure_scan_stack() {
-  while (!_promo_failure_scan_stack.is_empty()) {
-     oop obj = _promo_failure_scan_stack.pop();
-     obj->oop_iterate(_promo_failure_scan_stack_closure);
+  while (!_promo_failure_scan_stack.is_empty()) { // _promo_failure_scan_stack不为空 晋升失败对象存储到_promo_failure_scan_stack不为空
+     oop obj = _promo_failure_scan_stack.pop(); // 弹出1个
+     obj->oop_iterate(_promo_failure_scan_stack_closure); // 处理obj引用的其他对象
   }
 }
 
@@ -838,7 +838,7 @@ void DefNewGeneration::reset_saved_marks() {
   from()->reset_saved_mark();
 }
 
-
+// todo saved_mark_at_top
 bool DefNewGeneration::no_allocs_since_save_marks() {
   assert(eden()->saved_mark_at_top(), "Violated spec - alloc in eden");
   assert(from()->saved_mark_at_top(), "Violated spec - alloc in from");
