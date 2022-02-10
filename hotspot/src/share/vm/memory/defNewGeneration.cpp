@@ -63,7 +63,7 @@ bool DefNewGeneration::IsAliveClosure::do_object_b(oop p) {
 
 DefNewGeneration::KeepAliveClosure::
 KeepAliveClosure(ScanWeakRefClosure* cl) : _cl(cl) {
-  GenRemSet* rs = GenCollectedHeap::heap()->rem_set();
+  GenRemSet* rs = GenCollectedHeap::heap()->rem_set(); // todo cardTable
   assert(rs->rs_kind() == GenRemSet::CardTable, "Wrong rem set kind.");
   _rs = (CardTableRS*)rs;
 }
@@ -490,7 +490,7 @@ size_t DefNewGeneration::capacity_before_gc() const {
 }
 
 size_t DefNewGeneration::contiguous_available() const {
-  return eden()->free();
+  return eden()->free(); // 剩余空间
 }
 
 

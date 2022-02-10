@@ -620,13 +620,13 @@ public:
 // class BlockOffsetArray;
 // class BlockOffsetArrayContigSpace;
 class BlockOffsetSharedArray;
-
+// todo cardTable
 class CardGeneration: public Generation {
   friend class VMStructs;
  protected:
-  // This is shared with other generations.
+  // This is shared with other generations. 卡表 加快找到老年代引用年轻代对象
   GenRemSet* _rs;
-  // This is local to this generation.
+  // This is local to this generation. 偏移表，与卡表配合加快找到老年代引用年轻代对象
   BlockOffsetSharedArray* _bts;
 
   // current shrinking effect: this damps shrinking when the heap gets empty.

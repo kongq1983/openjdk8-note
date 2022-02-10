@@ -36,6 +36,8 @@ void ClassLoaderData::classes_do(void f(InstanceKlass*)) {
 每个类加载器都会对应一个ClassLoaderData的数据结构，里面会存譬如具体的类加载器对象，加载的klass，管理内存的metaspace等，它是一个链式结构，会链到下一个ClassLoaderData上，gc的时候通过ClassLoaderDataGraph来遍历这些ClassLoaderData，ClassLoaderDataGraph的第一个ClassLoaderData是bootstrapClassLoader的
 
 
+卡表: 10.1.3
+
 
 好文章:
 https://my.oschina.net/u/3645114/blog/5119362
