@@ -5526,7 +5526,7 @@ jint JNICALL jni_DetachCurrentThread(JavaVM *vm)  {
   // or hidden (e.g. it could probably be hidden in the same
   // (platform-dependent) methods where we do alternate stack
   // maintenance work?)
-  thread->exit(false, JavaThread::jni_detach);
+  thread->exit(false, JavaThread::jni_detach);   /
   delete thread;
 
 #ifndef USDT2

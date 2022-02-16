@@ -1592,8 +1592,8 @@ JavaThread::JavaThread(ThreadFunction entry_point, size_t stack_sz) :
   // by calling Threads:add. The reason why this is not done here, is because the thread
   // object must be fully initialized (take a look at JVM_Start)
 }
-// todo javaThread析构函数   释放资源
-JavaThread::~JavaThread() {
+// todo javaThread析构函数   释放资源   todo ~JavaThread
+JavaThread::~JavaThread() { // todo JavaThread
   if (TraceThreadEvents) {
       tty->print_cr("terminate thread %p", this);
   }
@@ -1631,7 +1631,7 @@ JavaThread::~JavaThread() {
   if (_thread_stat != NULL) delete _thread_stat;
 }
 
-// todo thread start
+// todo thread start todo run
 // The first routine called by a new Java thread
 void JavaThread::run() {
   // initialize thread-local alloc buffer related fields
@@ -3965,7 +3965,7 @@ void JavaThread::invoke_shutdown_hooks() {
 //      > deletes PerfMemory resources
 //   + Return to caller
 
-bool Threads::destroy_vm() {
+bool Threads::destroy_vm() { // jvm退出
   JavaThread* thread = JavaThread::current();
 
 #ifdef ASSERT
@@ -4005,8 +4005,8 @@ bool Threads::destroy_vm() {
   }
 
   before_exit(thread);
-
-  thread->exit(true);
+  // todo thread   toto exit  todo threadExit
+  thread->exit(true);  // thread exit
 
   // Stop VM thread.
   {
@@ -4046,7 +4046,7 @@ bool Threads::destroy_vm() {
 
   notify_vm_shutdown();
 
-  delete thread;
+  delete thread;  // todo delete thread
 
   // exit_globals() will delete tty
   exit_globals();
