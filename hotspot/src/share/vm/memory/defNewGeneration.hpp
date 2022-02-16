@@ -101,9 +101,9 @@ protected:
   void set_promo_failure_scan_stack_closure(ExtendedOopClosure *scan_stack_closure) {
     _promo_failure_scan_stack_closure = scan_stack_closure;
   }
-
+  // todo 晋升失败的对象存储到_promo_failure_scan_stack
   Stack<oop, mtGC> _promo_failure_scan_stack;
-  void drain_promo_failure_scan_stack(void);
+  void drain_promo_failure_scan_stack(void); // 处理晋升失败对象引用的其他对象
   bool _promo_failure_drain_in_progress;
 
   // Performance Counters

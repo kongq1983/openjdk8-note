@@ -63,7 +63,7 @@ bool DefNewGeneration::IsAliveClosure::do_object_b(oop p) {
 
 DefNewGeneration::KeepAliveClosure::
 KeepAliveClosure(ScanWeakRefClosure* cl) : _cl(cl) {
-  GenRemSet* rs = GenCollectedHeap::heap()->rem_set(); // todo cardTable
+  GenRemSet* rs = GenCollectedHeap::heap()->rem_set();
   assert(rs->rs_kind() == GenRemSet::CardTable, "Wrong rem set kind.");
   _rs = (CardTableRS*)rs;
 }
@@ -490,7 +490,7 @@ size_t DefNewGeneration::capacity_before_gc() const {
 }
 
 size_t DefNewGeneration::contiguous_available() const {
-  return eden()->free(); // 剩余空间
+  return eden()->free();
 }
 
 
@@ -599,7 +599,7 @@ void DefNewGeneration::collect(bool   full,
 
   age_table()->clear();
   to()->clear(SpaceDecorator::Mangle);
-  // 在初始化堆的过程，会创建一个覆盖整个空间的数组GenRemSet，数组每个字节对应于堆的512字节，用于遍历新生代和老年代空间，这里对GenRemSet进行初始化准备
+
   gch->rem_set()->prepare_for_younger_refs_iterate(false);
   // //标记所有内存代当前分配对象存储空间的起始位置
   assert(gch->no_allocs_since_save_marks(0),

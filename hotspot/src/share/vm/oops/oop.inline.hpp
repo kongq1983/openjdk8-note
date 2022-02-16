@@ -622,17 +622,17 @@ inline void oopDesc::follow_contents(void) {
 inline bool oopDesc::is_forwarded() const {
   // The extra heap check is needed since the obj might be locked, in which case the
   // mark would point to a stack location and have the sentinel bit cleared
-  return mark()->is_marked();
+  return mark()->is_marked(); // 11
 }
 
 // Used by scavengers
 inline void oopDesc::forward_to(oop p) {
-  assert(check_obj_alignment(p),
+  assert(check_obj_alignment(p), // //校验oop的地址是对齐的
          "forwarding to something not aligned");
-  assert(Universe::heap()->is_in_reserved(p),
+  assert(Universe::heap()->is_in_reserved(p), //校验p在Java堆中
          "forwarding to something not in heap");
-  markOop m = markOopDesc::encode_pointer_as_mark(p);
-  assert(m->decode_pointer() == p, "encoding must be reversable");
+  markOop m = markOopDesc::encode_pointer_as_mark(p); //利用地址p生成一个新的对象头，将该对象头打上GC标记，最后修改当前对象的对象头
+  assert(m->decode_pointer() == p, "encoding must be reversable"); //校验新对象头解析出来的地址等于p
   set_mark(m);
 }
 

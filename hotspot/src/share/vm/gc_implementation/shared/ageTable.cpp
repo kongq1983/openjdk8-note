@@ -77,20 +77,20 @@ void ageTable::merge_par(ageTable* subTable) {
     Atomic::add_ptr(subTable->sizes[i], &sizes[i]);
   }
 }
-
-uint ageTable::compute_tenuring_threshold(size_t survivor_capacity) {
-  size_t desired_survivor_size = (size_t)((((double) survivor_capacity)*TargetSurvivorRatio)/100);
+// 动态计算_tenuring_threshold (每次YGC的时候，都会计算一次)
+uint ageTable::compute_tenuring_threshold(size_t survivor_capacity) { // 默认TargetSurvivorRatio=50
+  size_t desired_survivor_size = (size_t)((((double) survivor_capacity)*TargetSurvivorRatio)/100); // 设置期望的survivor为实际survivor的一半
   size_t total = 0;
   uint age = 1;
   assert(sizes[0] == 0, "no objects with age zero should be recorded");
-  while (age < table_size) {
+  while (age < table_size) { // table_size=16 (table_size = markOopDesc::max_age + 1)
     total += sizes[age];
     // check if including objects of age 'age' made us pass the desired
     // size, if so 'age' is the new threshold
     if (total > desired_survivor_size) break;
     age++;
   }
-  uint result = age < MaxTenuringThreshold ? age : MaxTenuringThreshold;
+  uint result = age < MaxTenuringThreshold ? age : MaxTenuringThreshold; // 最大是15
 
   if (PrintTenuringDistribution || UsePerfData) {
 

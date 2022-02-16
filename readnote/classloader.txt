@@ -1,0 +1,19 @@
+
+
+
+jvm.h:423
+JVM_ENTRY(jclass, JVM_DefineClass(JNIEnv *env, const char *name, jobject loader, const jbyte *buf, jsize len, jobject pd))
+  JVMWrapper2("JVM_DefineClass %s", name);
+
+  return jvm_define_class_common(env, name, loader, buf, len, pd, NULL, true, THREAD);
+JVM_END
+
+
+jvm.cpp:987
+jvm_define_class_common
+
+
+Java_java_lang_Class_forName0
+Class.c:96
+
+JVM_FindClassFromCaller jvm:cpp

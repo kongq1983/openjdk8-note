@@ -81,7 +81,7 @@ public:
   bool contains(const MemRegion mr2) const {
     return _start <= mr2._start && end() >= mr2.end();
   }
-  bool contains(const void* addr) const {
+  bool contains(const void* addr) const { // 是否在地址区间内
     return addr >= (void*)_start && addr < (void*)end();
   }
   bool equals(const MemRegion mr2) const {
