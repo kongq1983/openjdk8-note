@@ -1,0 +1,110 @@
+
+
+ArrayList  初始化默认空数组
+
+add() 数组默认size=10  (最小为10)  如果是addAll (看10和参数的大小，取大值)
+
+ensureCapacityInternal(int minCapacity)
+
+扩容:   int newCapacity = oldCapacity + (oldCapacity >> 1);
+
+
+
+HashMap
+扩容   往左移1位
+
+
+JAVA中常见的内存溢出问题
+堆溢出、栈溢出(递归)、方法区溢出
+
+
+Jvm调优方式
+
+JVM内存模型
+新生代(tlab  eden from to )、老生代、metaspace
+
+
+redis数据备份
+rdb  aof
+
+ redis双写一致性的解决办法
+
+ spring 事务传播行为
+ 7种 (PROPAGATION_REQUIRED  PROPAGATION_REQUIRES_NEW)
+ PROPAGATION_NEVER
+
+
+ spring常见的设计模式
+
+  spring 动态代理，
+
+  jdk代理
+
+  spring 自动注入的实现方式
+
+
+  Mybatis1 缓存
+
+  关联查询
+
+  联合查询是几个表联合查询,只查询一次
+
+  <select id="queryForList" resultMap="queryForListMap">
+          SELECT
+            u.id,
+            u.username,
+            u.password,
+            r.id r_id,
+            r.name r_name,
+            r.jsms r_jsms,
+            r.bz r_bz,
+            r.jlzt r_jlzt,
+            r.glbm r_glbm
+          FROM
+            user u
+          LEFT JOIN
+            role r
+          ON
+            u.id = r.userid
+      </select>
+
+  <resultMap id="queryForListMap" type="com.sica.domain.User">
+  <id column="id" property="id" jdbcType="VARCHAR"/>
+  <result column="username" property="username" jdbcType="VARCHAR"/>
+  <result column="password" property="password" jdbcType="VARCHAR"/>
+  <collection property="roles" javaType="java.util.List" ofType="com.sica.domain.Role">
+      <id column="r_id" property="id" jdbcType="VARCHAR" />
+      <result column="r_name" property="name" jdbcType="VARCHAR" />
+      <result column="r_jsms" property="jsms" jdbcType="VARCHAR" />
+      <result column="r_bz" property="bz" jdbcType="VARCHAR" />
+      <result column="r_jlzt" property="jlzt" jdbcType="INTEGER" />
+      <result column="r_glbm" property="glbm" jdbcType="VARCHAR" />
+  </collection>
+</resultMap>
+
+嵌套查询
+1对1
+
+<resultMap id=”blogResult” type=”Blog”>
+<association property="author" column="blog_author_id" javaType="Author"
+select=”selectAuthor”/>
+</resultMap>
+
+<select id=”selectBlog” parameterType=”int” resultMap=”blogResult”>
+SELECT * FROM BLOG WHERE ID = #{id}
+</select>
+
+<select id=”selectAuthor” parameterType=”int” resultType="Author">
+SELECT * FROM AUTHOR WHERE ID = #{id}
+</select>
+
+
+左连接:
+select * from s_sale_order o
+   left join s_sale_order_detail dd on o.saleorderid=dd.saleorderid
+   where o.saleorderid in ('7630CAEF939D43EEA62323B13080CA0B')
+
+
+数据库解决并发访问的方式
+乐观锁、悲观锁
+MVCC
