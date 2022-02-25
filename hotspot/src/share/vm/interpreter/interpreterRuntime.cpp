@@ -146,7 +146,7 @@ IRT_END
 
 //------------------------------------------------------------------------------------------------------------------------
 // Allocation
-// todo new 指令  java new关键字的方法,本质上在java使用new关键字时会调用这个方法
+// todo new 指令  java new关键字的方法,本质上在java使用new关键字时会调用这个方法  todo _new
 IRT_ENTRY(void, InterpreterRuntime::_new(JavaThread* thread, ConstantPool* pool, int index))
   Klass* k_oop = pool->klass_at(index, CHECK); // 先会去常量池（这里的常量池其实运行时常量池）中查找Klass的信息
   instanceKlassHandle klass (THREAD, k_oop); // 然后将其包装成instanceKlassHandle句柄,其实就是klass包装类

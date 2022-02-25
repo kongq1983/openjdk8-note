@@ -642,7 +642,7 @@ bool InstanceKlass::link_class_impl(
       return false;
     }
 
-    link_class_impl(super, throw_verifyerror, CHECK_false);
+    link_class_impl(super, throw_verifyerror, CHECK_false); // todo 重点 this:612
   }
 
   // link all interfaces implemented by this class before linking this class
@@ -713,8 +713,8 @@ bool InstanceKlass::link_class_impl(
       // also does loader constraint checking
       if (!this_oop()->is_shared()) {
         ResourceMark rm(THREAD);
-        this_oop->vtable()->initialize_vtable(true, CHECK_false);
-        this_oop->itable()->initialize_itable(true, CHECK_false);
+        this_oop->vtable()->initialize_vtable(true, CHECK_false); // vtable
+        this_oop->itable()->initialize_itable(true, CHECK_false); // itable
       }
 #ifdef ASSERT
       else {

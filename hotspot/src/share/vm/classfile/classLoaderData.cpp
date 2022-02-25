@@ -573,7 +573,7 @@ ClassLoaderData* ClassLoaderDataGraph::_saved_head = NULL;
 bool ClassLoaderDataGraph::_should_purge = false;
 
 // Add a new class loader data node to the list.  Assign the newly created
-// ClassLoaderData into the java/lang/ClassLoader object as a hidden field
+// ClassLoaderData into the java/lang/ClassLoader object as a hidden field   todo ClassLoaderDataGraph::add
 ClassLoaderData* ClassLoaderDataGraph::add(Handle loader, bool is_anonymous, TRAPS) {
   // We need to allocate all the oops for the ClassLoaderData before allocating the
   // actual ClassLoaderData object.
@@ -583,7 +583,7 @@ ClassLoaderData* ClassLoaderDataGraph::add(Handle loader, bool is_anonymous, TRA
                                        // ClassLoaderData in the graph since the CLD
                                        // contains unhandled oops
 
-  ClassLoaderData* cld = new ClassLoaderData(loader, is_anonymous, dependencies);
+  ClassLoaderData* cld = new ClassLoaderData(loader, is_anonymous, dependencies); // 新建1个ClassLoader
 
 
   if (!is_anonymous) {

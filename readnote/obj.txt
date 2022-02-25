@@ -1,0 +1,10 @@
+
+
+interpreterRuntime.cpp : 150
+InterpreterRuntime::_new
+
+
+readme
+
+todo 判断父类是不是final  加载的时候 
+THROW_MSG_(vmSymbols::java_lang_VerifyError(), "Cannot inherit from final class", nullHandle);
