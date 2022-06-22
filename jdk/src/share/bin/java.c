@@ -351,9 +351,9 @@ JLI_Launch(int argc, char ** argv,              /* main argc, argc */
     } while (JNI_FALSE)
 
 int JNICALL
-JavaMain(void * _args)
+JavaMain(void * _args)  // todo javamain
 {
-    JavaMainArgs *args = (JavaMainArgs *)_args;
+    JavaMainArgs *args = (JavaMainArgs *)_args; // java 参数
     int argc = args->argc;
     char **argv = args->argv;
     int mode = args->mode;
@@ -1289,7 +1289,7 @@ NewPlatformStringArray(JNIEnv *env, char **strv, int strc)
  * call it for more details refer to the java implementation.
  */
 static jclass
-LoadMainClass(JNIEnv *env, int mode, char *name)
+LoadMainClass(JNIEnv *env, int mode, char *name)  // todo java main
 {
     jmethodID mid;
     jstring str;

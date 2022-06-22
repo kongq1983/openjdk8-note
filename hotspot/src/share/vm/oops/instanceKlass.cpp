@@ -609,7 +609,7 @@ bool InstanceKlass::link_class_or_fail(TRAPS) {
   return is_linked();
 }
 
-bool InstanceKlass::link_class_impl(
+bool InstanceKlass::link_class_impl(  // todo 连接  链接
     instanceKlassHandle this_oop, bool throw_verifyerror, TRAPS) {
   // check for error state
   if (this_oop->is_in_error_state()) {
@@ -642,7 +642,7 @@ bool InstanceKlass::link_class_impl(
       return false;
     }
 
-    link_class_impl(super, throw_verifyerror, CHECK_false);
+    link_class_impl(super, throw_verifyerror, CHECK_false); // todo 重点 this:612
   }
 
   // link all interfaces implemented by this class before linking this class
@@ -687,7 +687,7 @@ bool InstanceKlass::link_class_impl(
                                    jt->get_thread_stat()->perf_recursion_counts_addr(),
                                    jt->get_thread_stat()->perf_timers_addr(),
                                    PerfClassTraceTime::CLASS_VERIFY);
-          bool verify_ok = verify_code(this_oop, throw_verifyerror, THREAD);
+          bool verify_ok = verify_code(this_oop, throw_verifyerror, THREAD); // 验证
           if (!verify_ok) {
             return false;
           }
@@ -701,7 +701,7 @@ bool InstanceKlass::link_class_impl(
         }
 
         // also sets rewritten
-        this_oop->rewrite_class(CHECK_false);
+        this_oop->rewrite_class(CHECK_false);  // rewrite class
       }
 
       // relocate jsrs and link methods after they are all rewritten
@@ -713,8 +713,8 @@ bool InstanceKlass::link_class_impl(
       // also does loader constraint checking
       if (!this_oop()->is_shared()) {
         ResourceMark rm(THREAD);
-        this_oop->vtable()->initialize_vtable(true, CHECK_false);
-        this_oop->itable()->initialize_itable(true, CHECK_false);
+        this_oop->vtable()->initialize_vtable(true, CHECK_false); // vtable
+        this_oop->itable()->initialize_itable(true, CHECK_false); // itable
       }
 #ifdef ASSERT
       else {

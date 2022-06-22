@@ -825,7 +825,7 @@ static void *java_start(Thread *thread) {
   }
 
   // call one more level start routine
-  thread->run(); // JavaThread->run
+  thread->run(); // JavaThread->run todo run
 
   return 0;
 }
@@ -898,7 +898,7 @@ bool os::create_thread(Thread* thread, ThreadType thr_type, size_t stack_size) {
       os::Linux::createThread_lock()->lock_without_safepoint_check();
     }
 
-    pthread_t tid; // 创建线程  重点java_start方法
+    pthread_t tid; // 创建线程  重点java_start方法  todo java_start
     int ret = pthread_create(&tid, &attr, (void* (*)(void*)) java_start, thread); // todo thread create
 
     pthread_attr_destroy(&attr);
@@ -4188,7 +4188,7 @@ static void do_resume(OSThread* osthread) {
 
 ////////////////////////////////////////////////////////////////////////////////
 // interrupt support
-// todo os::interrupt   todo interrupt
+// todo os::interrupt   todo interrupt  todo interrupt
 void os::interrupt(Thread* thread) {
   assert(Thread::current() == thread || Threads_lock->owned_by_self(),
     "possibility of dangling Thread pointer");

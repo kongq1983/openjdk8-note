@@ -99,7 +99,7 @@ Java_java_lang_ClassLoader_defineClass1(JNIEnv *env,
 {
     jbyte *body;
     char *utfName;
-    jclass result = 0;
+    jclass result = 0;   // jclass
     char buf[128];
     char* utfSource;
     char sourceBuf[1024];
@@ -149,7 +149,7 @@ Java_java_lang_ClassLoader_defineClass1(JNIEnv *env,
     } else {
         utfSource = NULL;
     }
-    result = JVM_DefineClassWithSource(env, utfName, loader, body, length, pd, utfSource);
+    result = JVM_DefineClassWithSource(env, utfName, loader, body, length, pd, utfSource); // jclass
 
     if (utfSource && utfSource != sourceBuf)
         free(utfSource);
