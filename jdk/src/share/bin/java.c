@@ -1295,7 +1295,7 @@ LoadMainClass(JNIEnv *env, int mode, char *name)
     jstring str;
     jobject result;
     jlong start, end;
-    jclass cls = GetLauncherHelperClass(env);
+    jclass cls = GetLauncherHelperClass(env); // sun/launcher/LauncherHelper
     NULL_CHECK0(cls);
     if (JLI_IsTraceLauncher()) {
         start = CounterGet();

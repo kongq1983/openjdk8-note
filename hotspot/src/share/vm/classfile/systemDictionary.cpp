@@ -1286,7 +1286,7 @@ instanceKlassHandle SystemDictionary::load_instance_class(Symbol* class_name, Ha
       k = find_or_define_instance_class(class_name, class_loader, k, CHECK_(nh));
     }
     return k;
-  } else {
+  } else { // toto toto
     // Use user specified class loader to load class. Call loadClass operation on class_loader.
     ResourceMark rm(THREAD);
 
@@ -2055,7 +2055,7 @@ void SystemDictionary::update_dictionary(int d_index, unsigned int d_hash,
     // NOTE that we must only do this when the class is initally
     // defined, not each time it is referenced from a new class loader
     if (k->class_loader() == class_loader()) {
-      k->set_prototype_header(markOopDesc::biased_locking_prototype());
+      k->set_prototype_header(markOopDesc::biased_locking_prototype()); // 设置偏向锁
     }
   }
 

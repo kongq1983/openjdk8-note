@@ -365,7 +365,7 @@ static BiasedLocking::Condition bulk_revoke_or_rebias_at_safepoint(oop o,
           if ((owner->klass() == k_o) && mark->has_bias_pattern()) { // kclass要相等  java成面就是同个Class
             // We might have encountered this object already in the case of recursive locking
             assert(mark->bias_epoch() == prev_epoch || mark->bias_epoch() == cur_epoch, "error in bias epoch adjustment"); // 判断markword的epoch
-            owner->set_mark(mark->set_bias_epoch(cur_epoch)); // 设置markword的epoch   (不同实例对象，同个Class场景)
+            owner->set_mark(mark->set_bias_epoch(cur_epoch)); // //更新所有栈中的有偏向锁的epoch  设置markword的epoch   (不同实例对象，同个Class场景)
           }
         }
       }

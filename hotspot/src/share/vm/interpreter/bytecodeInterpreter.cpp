@@ -2116,19 +2116,19 @@ run:
           int field_offset = cache->f2_as_index();
           if (cache->is_volatile()) { // todo volatile=true
             if (tos_type == itos) {
-              obj->release_int_field_put(field_offset, STACK_INT(-1));
-            } else if (tos_type == atos) {
+              obj->release_int_field_put(field_offset, STACK_INT(-1)); //// int类型赋值
+            } else if (tos_type == atos) { // 对象类型赋值
               VERIFY_OOP(STACK_OBJECT(-1));
               obj->release_obj_field_put(field_offset, STACK_OBJECT(-1));
-            } else if (tos_type == btos) {
+            } else if (tos_type == btos) { // byte类型赋值
               obj->release_byte_field_put(field_offset, STACK_INT(-1));
-            } else if (tos_type == ltos) {
+            } else if (tos_type == ltos) { // long类型赋值
               obj->release_long_field_put(field_offset, STACK_LONG(-1));
-            } else if (tos_type == ctos) {
+            } else if (tos_type == ctos) { // char类型赋值
               obj->release_char_field_put(field_offset, STACK_INT(-1));
-            } else if (tos_type == stos) {
+            } else if (tos_type == stos) { // short类型赋值
               obj->release_short_field_put(field_offset, STACK_INT(-1));
-            } else if (tos_type == ftos) {
+            } else if (tos_type == ftos) { // float类型赋值
               obj->release_float_field_put(field_offset, STACK_FLOAT(-1));
             } else {
               obj->release_double_field_put(field_offset, STACK_DOUBLE(-1));
@@ -2200,7 +2200,7 @@ run:
                 HeapWord* to_zero = (HeapWord*) result + sizeof(oopDesc) / oopSize;
                 obj_size -= sizeof(oopDesc) / oopSize;
                 if (obj_size > 0 ) {
-                  memset(to_zero, 0, obj_size * HeapWordSize);
+                  memset(to_zero, 0, obj_size * HeapWordSize); // 用0填充 HeapWordSize=8
                 }
               }
               if (UseBiasedLocking) { //使用偏向锁
@@ -2213,8 +2213,8 @@ run:
               // Must prevent reordering of stores for object initialization
               // with stores that publish the new object.
               OrderAccess::storestore();
-              SET_STACK_OBJECT(result, 0);
-              UPDATE_PC_AND_TOS_AND_CONTINUE(3, 1);
+              SET_STACK_OBJECT(result, 0); // //将目标对象放到操作数栈的顶部
+              UPDATE_PC_AND_TOS_AND_CONTINUE(3, 1);   //更新PC指令计数器，即告诉解释器此条new指令执行完毕，new指令总共3个字节，计数器加3
             }
           }
         }

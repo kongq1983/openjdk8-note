@@ -901,7 +901,7 @@ JVM_ENTRY(jclass, JVM_FindClassFromCaller(JNIEnv* env, const char* name,
   if (name == NULL || (int)strlen(name) > Symbol::max_length()) {
     // It's impossible to create this class;  the name cannot fit
     // into the constant pool.
-    THROW_MSG_0(vmSymbols::java_lang_ClassNotFoundException(), name);
+    THROW_MSG_0(vmSymbols::java_lang_ClassNotFoundException(), name); // java_lang_ClassNotFoundException
   }
 
   TempNewSymbol h_name = SymbolTable::new_symbol(name, CHECK_NULL);
@@ -4099,15 +4099,15 @@ jclass find_class_from_class_loader(JNIEnv* env, Symbol* name, jboolean init,
   //   us to pass the NULL as the initiating class loader.  The VM is responsible for
   //   the checkPackageAccess relative to the initiating class loader via the
   //   protection_domain. The protection_domain is passed as NULL by the java code
-  //   if there is no security manager in 3-arg Class.forName().
+  //   if there is no security manager in 3-arg Class.forName(). 首先保证类被正确加载，如果没有加载，那么最终会调用ClassFileParser.parseClassFile()
   Klass* klass = SystemDictionary::resolve_or_fail(name, loader, protection_domain, throwError != 0, CHECK_NULL); // todo create instanceClass
 
   KlassHandle klass_handle(THREAD, klass);
   // Check if we should initialize the class
   if (init && klass_handle->oop_is_instance()) {
     klass_handle->initialize(CHECK_NULL);
-  } // // todo create instanceMirrorClass
-  return (jclass) JNIHandles::make_local(env, klass_handle->java_mirror());
+  } // // todo create instanceMirrorClass  obj是堆中的对象，现在本地函数要通过句柄访问这个对象，此时会调用JNIHandles::make_local()函数创建出对应的句柄，这个句柄的内存空间是从JNIHandleBlock中分配出来的
+  return (jclass) JNIHandles::make_local(env, klass_handle->java_mirror()); // 为引用分配栈上内存  最后返回一个已经装配好了的，能够被java代码所访问的jobject
 }
 
 
