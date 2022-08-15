@@ -901,7 +901,7 @@ JVM_ENTRY(jclass, JVM_FindClassFromCaller(JNIEnv* env, const char* name,
   if (name == NULL || (int)strlen(name) > Symbol::max_length()) {
     // It's impossible to create this class;  the name cannot fit
     // into the constant pool.
-    THROW_MSG_0(vmSymbols::java_lang_ClassNotFoundException(), name);
+    THROW_MSG_0(vmSymbols::java_lang_ClassNotFoundException(), name); // ::java_lang_ClassNotFoundException()
   }
 
   TempNewSymbol h_name = SymbolTable::new_symbol(name, CHECK_NULL);
@@ -4171,7 +4171,7 @@ JVM_ENTRY(jobject, JVM_InvokeMethod(JNIEnv *env, jobject method, jobject obj, jo
   }
 JVM_END
 
-
+// todo newInstance0
 JVM_ENTRY(jobject, JVM_NewInstanceFromConstructor(JNIEnv *env, jobject c, jobjectArray args0))
   JVMWrapper("JVM_NewInstanceFromConstructor");
   oop constructor_mirror = JNIHandles::resolve(c);

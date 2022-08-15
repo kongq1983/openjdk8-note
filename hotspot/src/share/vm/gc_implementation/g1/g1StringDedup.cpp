@@ -50,9 +50,9 @@ void G1StringDedup::stop() {
 }
 
 bool G1StringDedup::is_candidate_from_mark(oop obj) {
-  if (java_lang_String::is_instance(obj)) {
-    bool from_young = G1CollectedHeap::heap()->heap_region_containing_raw(obj)->is_young();
-    if (from_young && obj->age() < StringDeduplicationAgeThreshold) {
+  if (java_lang_String::is_instance(obj)) { // 是对象
+    bool from_young = G1CollectedHeap::heap()->heap_region_containing_raw(obj)->is_young(); // 是否在新生代
+    if (from_young && obj->age() < StringDeduplicationAgeThreshold) { // StringDeduplicationAgeThreshold=3
       // Candidate found. String is being evacuated from young to old but has not
       // reached the deduplication age threshold, i.e. has not previously been a
       // candidate during its life in the young generation.

@@ -32,7 +32,7 @@ JNIEXPORT jobject JNICALL Java_sun_reflect_NativeMethodAccessorImpl_invoke0
 {
     return JVM_InvokeMethod(env, m, obj, args);
 }
-
+// todo newInstance0
 JNIEXPORT jobject JNICALL Java_sun_reflect_NativeConstructorAccessorImpl_newInstance0
 (JNIEnv *env, jclass unused, jobject c, jobjectArray args)
 {
