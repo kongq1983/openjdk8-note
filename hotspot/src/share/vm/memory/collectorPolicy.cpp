@@ -963,10 +963,10 @@ void MarkSweepPolicy::initialize_alignments() {
   _space_alignment = _gen_alignment = (uintx)Generation::GenGrain;
   _heap_alignment = compute_heap_alignment();
 }
-
-void MarkSweepPolicy::initialize_generations() {
+//
+void MarkSweepPolicy::initialize_generations() { // allocation.hpp (type*) AllocateHeap((size) * sizeof(type), memflags, pc, allocfail)
   _generations = NEW_C_HEAP_ARRAY3(GenerationSpecPtr, number_of_generations(), mtGC, CURRENT_PC,
-    AllocFailStrategy::RETURN_NULL);
+    AllocFailStrategy::RETURN_NULL); // 通过c语言的malloc函数进行分配，当内存分配失败时返回NULL  todo 堆分配import
   if (_generations == NULL) {
     vm_exit_during_initialization("Unable to allocate gen spec");
   }

@@ -59,7 +59,7 @@ jobject JNIHandles::make_local(Thread* thread, oop obj) {
   }
 }
 
-
+// obj是堆中的对象，现在本地函数要通过句柄访问这个对象，此时会调用JNIHandles::make_local()函数创建出对应的句柄，这个句柄的内存空间是从JNIHandleBlock中分配出来的
 jobject JNIHandles::make_local(JNIEnv* env, oop obj) {
   if (obj == NULL) {
     return NULL;                // ignore null handles
