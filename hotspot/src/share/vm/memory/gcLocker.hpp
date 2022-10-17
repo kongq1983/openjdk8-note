@@ -43,8 +43,8 @@
 # include "os_bsd.inline.hpp"
 #endif
 
-// The direct lock/unlock calls do not force a collection if an unlock
-// decrements the count to zero. Avoid calling these if at all possible.
+// The direct lock/unlock calls do not force a collection if an unlock 如果解锁，直接锁定/解锁调用不会强制收集
+// decrements the count to zero. Avoid calling these if at all possible.  将计数减为零。 尽可能避免调用这些。
 
 class GC_locker: public AllStatic {
  private:
@@ -53,10 +53,10 @@ class GC_locker: public AllStatic {
   // _needs_gc is true.  The current value is computed during
   // safepointing and decremented during the slow path of GC_locker
   // unlocking.
-  static volatile jint _jni_lock_count;  // number of jni active instances.
-  static volatile bool _needs_gc;        // heap is filling, we need a GC
-                                         // note: bool is typedef'd as jint
-  static volatile bool _doing_gc;        // unlock_critical() is doing a GC
+  static volatile jint _jni_lock_count;  // number of jni active instances.  jni 活动实例的数量。
+  static volatile bool _needs_gc;        // heap is filling, we need a GC    堆正在填充，我们需要一个 GC
+                                         // note: bool is typedef'd as jint  注意： bool 被 typedef 为 jint
+  static volatile bool _doing_gc;        // unlock_critical() is doing a GC  unlock_critical() 正在执行 GC
 
 #ifdef ASSERT
   // This lock count is updated for all operations and is used to

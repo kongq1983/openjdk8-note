@@ -230,13 +230,13 @@ void trace_heap_free(void* p) {
 //--------------------------------------------------------------------------------------
 // ChunkPool implementation
 
-// MT-safe pool of chunks to reduce malloc/free thrashing
-// NB: not using Mutex because pools are used before Threads are initialized
+// MT-safe pool of chunks to reduce malloc/free thrashing   MT 安全的块池，以减少 malloc/free 抖动
+// NB: not using Mutex because pools are used before Threads are initialized  注意：不使用 Mutex，因为池是在线程初始化之前使用的
 class ChunkPool: public CHeapObj<mtInternal> {
-  Chunk*       _first;        // first cached Chunk; its first word points to next chunk
-  size_t       _num_chunks;   // number of unused chunks in pool
-  size_t       _num_used;     // number of chunks currently checked out
-  const size_t _size;         // size of each chunk (must be uniform)
+  Chunk*       _first;        // first cached Chunk; its first word points to next chunk   它的第一个词指向下一个块
+  size_t       _num_chunks;   // number of unused chunks in pool   池中未使用的块数
+  size_t       _num_used;     // number of chunks currently checked out    当前签出的块数
+  const size_t _size;         // size of each chunk (must be uniform)  必须统一
 
   // Our four static pools
   static ChunkPool* _large_pool;
@@ -258,7 +258,7 @@ class ChunkPool: public CHeapObj<mtInternal> {
   // All chunks in a ChunkPool has the same size
    ChunkPool(size_t size) : _size(size) { _first = NULL; _num_chunks = _num_used = 0; }
 
-  // Allocate a new chunk from the pool (might expand the pool)
+  // Allocate a new chunk from the pool (might expand the pool)  从池中分配一个新块（可能会扩展池）
   _NOINLINE_ void* allocate(size_t bytes, AllocFailType alloc_failmode) {
     assert(bytes == _size, "bad size");
     void* p = NULL;

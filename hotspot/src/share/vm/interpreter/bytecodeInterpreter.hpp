@@ -120,18 +120,18 @@ public:
 
 private:
     JavaThread*           _thread;        // the vm's java thread pointer
-    address               _bcp;           // instruction pointer
-    intptr_t*             _locals;        // local variable pointer
+    address               _bcp;           // instruction pointer   指令指针
+    intptr_t*             _locals;        // local variable pointer  局部变量指针
     ConstantPoolCache*    _constants;     // constant pool cache
     Method*               _method;        // method being executed
     DataLayout*           _mdx;           // compiler profiling data for current bytecode
-    intptr_t*             _stack;         // expression stack
+    intptr_t*             _stack;         // expression stack   表达式栈
     messages              _msg;           // frame manager <-> interpreter message
     frame_manager_message _result;        // result to frame manager
     interpreterState      _prev_link;     // previous interpreter state
     oop                   _oop_temp;      // mirror for interpreted native, null otherwise
-    intptr_t*             _stack_base;    // base of expression stack
-    intptr_t*             _stack_limit;   // limit of expression stack
+    intptr_t*             _stack_base;    // base of expression stack   表达式堆栈的基础
+    intptr_t*             _stack_limit;   // limit of expression stack   表达式堆栈的限制
     BasicObjectLock*      _monitor_base;  // base of monitors on the native stack
 
 

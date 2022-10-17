@@ -92,11 +92,11 @@ inline void*    Atomic::xchg_ptr(void*    exchange_value, volatile void*     des
 // 先执行输入  然后汇编指令  最后输出
 inline jint     Atomic::cmpxchg    (jint     exchange_value, volatile jint*     dest, jint     compare_value) {
   int mp = os::is_MP(); // a	eax, ax, al   //r	通用寄存器
-  __asm__ volatile (LOCK_IF_MP(%4) "cmpxchgl %1,(%3)" // 汇编指令 cmpxchgl exchange_value  dest
+  __asm__ volatile (LOCK_IF_MP(%4) "cmpxchgl %1,(%3)" // 汇编指令 cmpxchgl exchange_value  dest    success: 第2操作数(%3)直装载到首操作数%1    fail: 首操作数的值%1直接装载到eax
                     : "=a" (exchange_value)  //输出 //第一个冒号表示从汇编里输出到c语言的变量, =号表示在汇编里只能改变exchange_value变量的值，而不能取它的值
                     : "r" (exchange_value), "a" (compare_value), "r" (dest), "r" (mp)  //输入 //第二个冒号表示汇编里只能取比如exchange_value变量的值
                     : "cc", "memory");
-  return exchange_value;
+  return exchange_value; // return compare_value的值 则成功  返回(=a)其实就是eax的值
 }
 
 #ifdef AMD64

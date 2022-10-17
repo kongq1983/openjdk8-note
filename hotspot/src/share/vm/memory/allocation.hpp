@@ -193,8 +193,8 @@ template <MEMFLAGS F> class CHeapObj ALLOCATION_SUPER_CLASS_SPEC {
   void  operator delete [] (void* p);
 };
 
-// Base class for objects allocated on the stack only.
-// Calling new or delete will result in fatal error.
+// Base class for objects allocated on the stack only.   仅在栈上分配的对象的基类。
+// Calling new or delete will result in fatal error.   调用 new 或 delete 将导致致命错误。
 
 class StackObj ALLOCATION_SUPER_CLASS_SPEC {
  private:

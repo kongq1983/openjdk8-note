@@ -72,13 +72,13 @@ void G1StringDedup::enqueue_from_mark(oop java_string) {
 }
 
 bool G1StringDedup::is_candidate_from_evacuation(bool from_young, bool to_young, oop obj) {
-  if (from_young && java_lang_String::is_instance(obj)) {
-    if (to_young && obj->age() == StringDeduplicationAgeThreshold) {
+  if (from_young && java_lang_String::is_instance(obj)) { // 新生代 && 对象
+    if (to_young && obj->age() == StringDeduplicationAgeThreshold) {  // 新生代 && 经历过3次垃圾回收，还存活着
       // Candidate found. String is being evacuated from young to young and just
       // reached the deduplication age threshold.
       return true;
     }
-    if (!to_young && obj->age() < StringDeduplicationAgeThreshold) {
+    if (!to_young && obj->age() < StringDeduplicationAgeThreshold) {  // 非新生代
       // Candidate found. String is being evacuated from young to old but has not
       // reached the deduplication age threshold, i.e. has not previously been a
       // candidate during its life in the young generation.
