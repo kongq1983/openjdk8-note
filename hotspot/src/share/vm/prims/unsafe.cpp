@@ -135,7 +135,7 @@ inline void* index_oop_from_field_offset_long(oop p, jlong field_offset) {
   if (sizeof(char*) == sizeof(jint))    // (this constant folds!)
     return (address)p + (jint) byte_offset;
   else
-    return (address)p +        byte_offset;
+    return (address)p +        byte_offset;   // 对象首地址 + 字段在对象中的偏移量
 }
 
 // Externally callable versions:
@@ -1194,7 +1194,7 @@ UNSAFE_ENTRY(jboolean, Unsafe_CompareAndSwapObject(JNIEnv *env, jobject unsafe, 
   oop x = JNIHandles::resolve(x_h);
   oop e = JNIHandles::resolve(e_h);
   oop p = JNIHandles::resolve(obj);
-  HeapWord* addr = (HeapWord *)index_oop_from_field_offset_long(p, offset);
+  HeapWord* addr = (HeapWord *)index_oop_from_field_offset_long(p, offset);  // (address)p + offset
   oop res = oopDesc::atomic_compare_exchange_oop(x, addr, e, true);
   jboolean success  = (res == e);
   if (success)

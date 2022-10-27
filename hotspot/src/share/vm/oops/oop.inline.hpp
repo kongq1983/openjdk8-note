@@ -539,8 +539,8 @@ inline void oop_store_raw(HeapWord* addr, oop value) {
 inline oop oopDesc::atomic_compare_exchange_oop(oop exchange_value,
                                                 volatile HeapWord *dest,
                                                 oop compare_value,
-                                                bool prebarrier) {
-  if (UseCompressedOops) {
+                                                bool prebarrier) {  // (x, addr, e, true)
+  if (UseCompressedOops) { // 指针压缩
     if (prebarrier) {
       update_barrier_set_pre((narrowOop*)dest, exchange_value);
     }
@@ -552,9 +552,9 @@ inline oop oopDesc::atomic_compare_exchange_oop(oop exchange_value,
     // decode old from T to oop
     return decode_heap_oop(old);
   } else {
-    if (prebarrier) {
-      update_barrier_set_pre((oop*)dest, exchange_value);
-    }
+    if (prebarrier) { // true
+      update_barrier_set_pre((oop*)dest, exchange_value);  // 写前屏障
+    } // (Object o, long offset,Object expected,Object x)   exchange_value=x    compare_value=e    dest= (address)obj + offset
     return (oop)Atomic::cmpxchg_ptr(exchange_value, (oop*)dest, compare_value);
   }
 }

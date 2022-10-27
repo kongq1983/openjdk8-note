@@ -2197,13 +2197,13 @@ run:
             if (result != NULL) {  // 对象创建完成
               // Initialize object (if nonzero size and need) and then the header
               if (need_zero ) { // 根据是否需要填0选项，对分配空间的对象数据区进行填0
-                HeapWord* to_zero = (HeapWord*) result + sizeof(oopDesc) / oopSize;
+                HeapWord* to_zero = (HeapWord*) result + sizeof(oopDesc) / oopSize; // //跳过object head部分的内存,对象头不置零
                 obj_size -= sizeof(oopDesc) / oopSize;
                 if (obj_size > 0 ) {
-                  memset(to_zero, 0, obj_size * HeapWordSize); // 用0填充 HeapWordSize=8
+                  memset(to_zero, 0, obj_size * HeapWordSize); // 用0填充 HeapWordSize=8  todo memset import
                 }
               }
-              if (UseBiasedLocking) { //使用偏向锁
+              if (UseBiasedLocking) { //使用偏向锁 todo 偏向锁
                 result->set_mark(ik->prototype_header());
               } else {
                 result->set_mark(markOopDesc::prototype());
